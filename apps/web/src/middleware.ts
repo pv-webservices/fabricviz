@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const CUSTOMER_ROUTES = ['/fabrics', '/rooms', '/render', '/history'];
+const CUSTOMER_ROUTES = ['/fabrics', '/rooms', '/render', '/history', '/collections'];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -20,7 +20,7 @@ export function middleware(request: NextRequest) {
   }
 
   // Protect customer routes
-  const isCustomerRoute = CUSTOMER_ROUTES.some(route => pathname.startsWith(route));
+  const isCustomerRoute = pathname === '/' || CUSTOMER_ROUTES.some(route => pathname.startsWith(route));
   
   if (isCustomerRoute) {
     if (!token) {

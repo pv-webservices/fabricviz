@@ -36,7 +36,7 @@ export default function CustomerLoginPage() {
       setAuthToken(data.token);
       setAuthUser(data.customer);
       
-      router.push('/fabrics');
+      router.push('/');
     } catch (err: any) {
       setError(err.message || 'Invalid access code');
     } finally {

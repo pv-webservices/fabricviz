@@ -6,10 +6,10 @@ import { getHistoryItem } from '../services/history-service';
 export default async function resultRoutes(fastify: FastifyInstance) {
 
   // ── GET /api/results/:id ───────────────────────
-  fastify.get(
+  fastify.get<{ Params: { id: string } }>(
     '/api/results/:id',
     { preHandler: [authenticate] },
-    async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
       const user = request.user as TokenPayload;
       const accessCodeId = 'accessCodeId' in user ? user.accessCodeId : undefined;
 

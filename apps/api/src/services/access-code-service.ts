@@ -15,6 +15,7 @@ export interface AccessCodeRow {
   created_by: string | null;
   created_at: Date;
   last_used_at: Date | null;
+  feature_flags: string[] | null;
 }
 
 export function generateRandomCode(): string {

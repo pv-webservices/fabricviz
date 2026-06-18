@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'next/dist/client/components/navigation';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { fetchApi } from '@/lib/api';
 import { setAuthToken, setAuthUser } from '@/lib/auth';
@@ -18,7 +18,7 @@ export default function AdminLoginPage() {
   const [error, setError] = React.useState('');
   const [loading, setLoading] = React.useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: any) => {
     e.preventDefault();
     setError('');
     setLoading(true);

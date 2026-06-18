@@ -1,4 +1,4 @@
-import { Pool } from 'pg';
+import { Pool, PoolClient } from 'pg';
 
 export interface AuditEntry {
   userId?: string;
@@ -13,7 +13,7 @@ export interface AuditEntry {
 /**
  * Write an audit log entry to the database.
  */
-export async function writeAuditLog(db: Pool, entry: AuditEntry): Promise<void> {
+export async function writeAuditLog(db: Pool | PoolClient, entry: AuditEntry): Promise<void> {
   await db.query(
     `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, old_value, new_value, ip_address)
      VALUES ($1, $2, $3, $4, $5, $6, $7)`,

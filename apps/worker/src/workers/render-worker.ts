@@ -76,7 +76,7 @@ export function setupRenderWorker(connection: Redis, db: Pool) {
         throw err;
       }
     },
-    { connection }
+    { connection: connection as any }
   );
 
   worker.on('completed', (job) => {

@@ -16,6 +16,7 @@ export interface AccessCodeRow {
   render_count: number;
   credit_limit: number;
   credits_used: number;
+  feature_flags?: string[];
 }
 
 export interface UserRow {

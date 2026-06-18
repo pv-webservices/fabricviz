@@ -10,14 +10,17 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@fabricviz/domain": "workspace:*",
+    "@types/pg": "^8.11.6",
     "bullmq": "^5.7.8",
     "ioredis": "^5.4.1",
-    "@fabricviz/domain": "workspace:*"
+    "pg": "^8.11.5",
+    "vitest": "^1.6.0"
   },
   "devDependencies": {
-    "tsx": "^4.9.3",
-    "typescript": "^5.4.5",
+    "@fabricviz/config": "workspace:*",
     "@types/node": "^20.12.11",
-    "@fabricviz/config": "workspace:*"
+    "tsx": "^4.9.3",
+    "typescript": "^5.4.5"
   }
 }

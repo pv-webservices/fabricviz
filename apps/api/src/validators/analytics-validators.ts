@@ -7,4 +7,4 @@ export const trackEventSchema = z.object({
   visualizationId: z.string().uuid().optional(),
   metadata: z.record(z.any()).optional().default({}),
 });
-export type TrackEventInput = z.infer<typeof trackEventSchema>;
+export type TrackEventInput = z.input<typeof trackEventSchema>;

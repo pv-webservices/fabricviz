@@ -19,7 +19,7 @@ import {
 export default async function collectionRoutes(fastify: FastifyInstance) {
 
   // ── GET /api/collections ───────────────────────
-  fastify.get('/api/collections', async (request: FastifyRequest, reply: FastifyReply) => {
+  fastify.get<{ Params: { id: string } }>('/api/collections', async (request: any, reply: any) => {
     const parsed = collectionQuerySchema.safeParse(request.query);
     if (!parsed.success) {
       return reply.status(400).send(error('VALIDATION_ERROR', parsed.error.issues[0].message));
@@ -29,7 +29,7 @@ export default async function collectionRoutes(fastify: FastifyInstance) {
   });
 
   // ── GET /api/collections/:id ───────────────────
-  fastify.get('/api/collections/:id', async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+  fastify.get('/api/collections/:id', async (request: any, reply: any) => {
     const collection = await getCollectionById(fastify.db, request.params.id);
     if (!collection) {
       return reply.status(404).send(error('NOT_FOUND', 'Collection not found'));
@@ -39,10 +39,10 @@ export default async function collectionRoutes(fastify: FastifyInstance) {
   });
 
   // ── POST /api/collections ─────────────────────
-  fastify.post(
+  fastify.post<{ Params: { id: string } }>(
     '/api/collections',
     { preHandler: [requireAdmin] },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
       const parsed = createCollectionSchema.safeParse(request.body);
       if (!parsed.success) {
         return reply.status(400).send(error('VALIDATION_ERROR', parsed.error.issues[0].message));
@@ -68,7 +68,7 @@ export default async function collectionRoutes(fastify: FastifyInstance) {
   fastify.put(
     '/api/collections/:id',
     { preHandler: [requireAdmin] },
-    async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
       const parsed = updateCollectionSchema.safeParse(request.body);
       if (!parsed.success) {
         return reply.status(400).send(error('VALIDATION_ERROR', parsed.error.issues[0].message));
@@ -97,10 +97,10 @@ export default async function collectionRoutes(fastify: FastifyInstance) {
   );
 
   // ── DELETE /api/collections/:id ───────────────
-  fastify.delete(
+  fastify.delete<{ Params: { id: string } }>(
     '/api/collections/:id',
     { preHandler: [requireAdmin] },
-    async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
       const existing = await getCollectionById(fastify.db, request.params.id);
       if (!existing) {
         return reply.status(404).send(error('NOT_FOUND', 'Collection not found'));

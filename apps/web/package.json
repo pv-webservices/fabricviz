@@ -33,6 +33,7 @@
   },
   "devDependencies": {
     "@fabricviz/config": "workspace:*",
+    "@types/js-cookie": "^3.0.6",
     "@types/node": "^20.12.11",
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.0",

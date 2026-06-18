@@ -12,27 +12,28 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "fastify": "^4.26.2",
-    "fastify-plugin": "^4.5.1",
+    "@aws-sdk/client-s3": "^3.1071.0",
+    "@aws-sdk/s3-request-presigner": "^3.1071.0",
+    "@fabricviz/domain": "workspace:*",
     "@fastify/cors": "^9.0.1",
     "@fastify/jwt": "^8.0.0",
     "@fastify/multipart": "^8.2.0",
     "@fastify/rate-limit": "^9.1.0",
-    "zod": "^3.23.8",
-    "pg": "^8.11.5",
-    "ioredis": "^5.4.1",
-    "bullmq": "^5.7.8",
     "bcryptjs": "^2.4.3",
-    "@fabricviz/domain": "workspace:*"
+    "bullmq": "^5.7.8",
+    "fastify": "^4.26.2",
+    "fastify-plugin": "^4.5.1",
+    "ioredis": "^5.4.1",
+    "pg": "^8.11.5",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
-    "tsx": "^4.9.3",
-    "typescript": "^5.4.5",
+    "@fabricviz/config": "workspace:*",
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20.12.11",
     "@types/pg": "^8.11.6",
-    "@types/bcryptjs": "^2.4.6",
-    "vitest": "^1.6.0",
-    "@fabricviz/config": "workspace:*"
+    "tsx": "^4.9.3",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
   }
 }
-

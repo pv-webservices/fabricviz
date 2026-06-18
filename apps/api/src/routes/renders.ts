@@ -8,16 +8,16 @@ import { trackEvent } from '../services/analytics-service';
 
 export default async function renderRoutes(fastify: FastifyInstance) {
   // Initialize BullMQ queue using Fastify's Redis connection
-  const renderQueue = new Queue('render-jobs', { connection: fastify.redis });
+  const renderQueue = new Queue('render-jobs', { connection: fastify.redis as any });
 
   // ── POST /api/renders ──────────────────────────
-  fastify.post(
+  fastify.post<{ Params: { jobId: string } }>(
     '/api/renders',
     { 
       preHandler: [authenticate],
       config: { rateLimit: { max: 15, timeWindow: '1 minute' } } 
     },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
       const parsed = createRenderSchema.safeParse(request.body);
       if (!parsed.success) {
         return reply.status(400).send(error('VALIDATION_ERROR', parsed.error.issues[0].message));
@@ -55,7 +55,7 @@ export default async function renderRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/renders/:jobId/status',
     { preHandler: [authenticate] },
-    async (request: FastifyRequest<{ Params: { jobId: string } }>, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
       const status = await getRenderStatus(fastify.db, request.params.jobId);
       if (!status) {
         return reply.status(404).send(error('NOT_FOUND', 'Render job not found'));

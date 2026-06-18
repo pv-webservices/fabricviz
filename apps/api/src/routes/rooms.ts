@@ -18,7 +18,7 @@ import {
 export default async function roomRoutes(fastify: FastifyInstance) {
 
   // ── GET /api/rooms ─────────────────────────────
-  fastify.get('/api/rooms', async (request: FastifyRequest, reply: FastifyReply) => {
+  fastify.get<{ Params: { id: string } }>('/api/rooms', async (request: any, reply: any) => {
     const parsed = roomQuerySchema.safeParse(request.query);
     if (!parsed.success) {
       return reply.status(400).send(error('VALIDATION_ERROR', parsed.error.issues[0].message));
@@ -28,7 +28,7 @@ export default async function roomRoutes(fastify: FastifyInstance) {
   });
 
   // ── GET /api/rooms/:id ─────────────────────────
-  fastify.get('/api/rooms/:id', async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+  fastify.get('/api/rooms/:id', async (request: any, reply: any) => {
     const room = await getRoomById(fastify.db, request.params.id);
     if (!room) {
       return reply.status(404).send(error('NOT_FOUND', 'Room not found'));
@@ -37,10 +37,10 @@ export default async function roomRoutes(fastify: FastifyInstance) {
   });
 
   // ── POST /api/rooms ────────────────────────────
-  fastify.post(
+  fastify.post<{ Params: { id: string } }>(
     '/api/rooms',
     { preHandler: [requireAdmin] },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
       const parsed = createRoomSchema.safeParse(request.body);
       if (!parsed.success) {
         return reply.status(400).send(error('VALIDATION_ERROR', parsed.error.issues[0].message));
@@ -66,7 +66,7 @@ export default async function roomRoutes(fastify: FastifyInstance) {
   fastify.put(
     '/api/rooms/:id',
     { preHandler: [requireAdmin] },
-    async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
       const parsed = updateRoomSchema.safeParse(request.body);
       if (!parsed.success) {
         return reply.status(400).send(error('VALIDATION_ERROR', parsed.error.issues[0].message));
@@ -95,10 +95,10 @@ export default async function roomRoutes(fastify: FastifyInstance) {
   );
 
   // ── DELETE /api/rooms/:id ──────────────────────
-  fastify.delete(
+  fastify.delete<{ Params: { id: string } }>(
     '/api/rooms/:id',
     { preHandler: [requireAdmin] },
-    async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
       const existing = await getRoomById(fastify.db, request.params.id);
       if (!existing) {
         return reply.status(404).send(error('NOT_FOUND', 'Room not found'));

@@ -11,7 +11,7 @@ export default async function settingsRoutes(fastify: FastifyInstance) {
   // ── GET /api/settings ──────────────────────────
   fastify.get(
     '/api/settings',
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
       // Publicly accessible for frontend context (site name, tutorial url, etc)
       const settings = await getSettings(fastify.db);
       return reply.send(success(settings));
@@ -22,7 +22,7 @@ export default async function settingsRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/settings',
     { preHandler: [requireAdmin] },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
       const parsed = updateSettingsSchema.safeParse(request.body);
       if (!parsed.success) {
         return reply.status(400).send(error('VALIDATION_ERROR', 'Invalid settings payload'));

@@ -9,7 +9,7 @@ export default async function uploadRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/uploads',
     { preHandler: [authenticate] },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
       const data = await request.file();
       if (!data) {
         return reply.status(400).send(error('BAD_REQUEST', 'No file uploaded'));

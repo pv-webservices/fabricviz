@@ -18,10 +18,10 @@ import {
 export default async function accessCodeRoutes(fastify: FastifyInstance) {
 
   // ── GET /api/access-codes ──────────────────────
-  fastify.get(
+  fastify.get<{ Params: { id: string } }>(
     '/api/access-codes',
     { preHandler: [requireAdmin] },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
       const parsed = accessCodeQuerySchema.safeParse(request.query);
       if (!parsed.success) {
         return reply.status(400).send(error('VALIDATION_ERROR', parsed.error.issues[0].message));
@@ -35,7 +35,7 @@ export default async function accessCodeRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/access-codes/:id',
     { preHandler: [requireAdmin] },
-    async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
       const accessCode = await getAccessCodeById(fastify.db, request.params.id);
       if (!accessCode) {
         return reply.status(404).send(error('NOT_FOUND', 'Access code not found'));
@@ -45,10 +45,10 @@ export default async function accessCodeRoutes(fastify: FastifyInstance) {
   );
 
   // ── POST /api/access-codes ─────────────────────
-  fastify.post(
+  fastify.post<{ Params: { id: string } }>(
     '/api/access-codes',
     { preHandler: [requireAdmin] },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
       const parsed = createAccessCodeSchema.safeParse(request.body);
       if (!parsed.success) {
         return reply.status(400).send(error('VALIDATION_ERROR', parsed.error.issues[0].message));
@@ -74,7 +74,7 @@ export default async function accessCodeRoutes(fastify: FastifyInstance) {
   fastify.put(
     '/api/access-codes/:id',
     { preHandler: [requireAdmin] },
-    async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
       const parsed = updateAccessCodeSchema.safeParse(request.body);
       if (!parsed.success) {
         return reply.status(400).send(error('VALIDATION_ERROR', parsed.error.issues[0].message));
@@ -103,10 +103,10 @@ export default async function accessCodeRoutes(fastify: FastifyInstance) {
   );
 
   // ── DELETE /api/access-codes/:id ───────────────
-  fastify.delete(
+  fastify.delete<{ Params: { id: string } }>(
     '/api/access-codes/:id',
     { preHandler: [requireAdmin] },
-    async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
       const existing = await getAccessCodeById(fastify.db, request.params.id);
       if (!existing) {
         return reply.status(404).send(error('NOT_FOUND', 'Access code not found'));

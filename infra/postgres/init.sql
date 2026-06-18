@@ -178,3 +178,8 @@ INSERT INTO app_settings (key, value) VALUES
   ('storage_mode', 'cloud'),
   ('history_limit', '50'),
   ('tutorial_video_url', '');
+
+-- Default admin seed
+INSERT INTO users (email, password_hash, role, name) VALUES
+  ('admin@fabricviz.com', '$2a$12$5dj0ofiFyyluz0Gs4hTQd.mSfOo7jjdYZqAXCv5Z5vmoMdxj2i.Re', 'super_admin', 'FabricViz Admin')
+ON CONFLICT (email) DO NOTHING;

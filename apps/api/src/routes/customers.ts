@@ -9,7 +9,7 @@ export default async function customerRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/customers',
     { preHandler: [requireAdmin] },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
       const stats = await getCustomerUsageStats(fastify.db);
       return reply.send(success(stats));
     }
@@ -19,7 +19,7 @@ export default async function customerRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/customers/warnings',
     { preHandler: [requireAdmin] },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
       const warnings = await getCustomerWarnings(fastify.db);
       return reply.send(success(warnings));
     }

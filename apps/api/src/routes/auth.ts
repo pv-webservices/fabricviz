@@ -48,7 +48,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/auth/verify-code',
     { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
     const parsed = verifyCodeSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.status(400).send(error('VALIDATION_ERROR', parsed.error.issues[0].message));
@@ -145,7 +145,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/auth/admin-login',
     { config: { rateLimit: { max: 5, timeWindow: '1 minute' } } },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
     const parsed = adminLoginSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.status(400).send(error('VALIDATION_ERROR', parsed.error.issues[0].message));
@@ -201,7 +201,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/auth/me',
     { preHandler: [authenticate] },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
       const user = request.user as TokenPayload;
 
       if (user.type === 'customer') {
@@ -236,7 +236,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/auth/logout',
     { preHandler: [authenticate] },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
       const parsed = logoutSchema.safeParse(request.body);
       const user = request.user as TokenPayload;
 

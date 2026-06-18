@@ -6,7 +6,8 @@
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
-    "clean": "turbo run clean && rm -rf node_modules"
+    "clean": "turbo run clean && rm -rf node_modules",
+    "seed": "npx tsx scripts/seed-dev.ts"
   },
   "devDependencies": {
     "turbo": "^2.0.0"
@@ -15,6 +16,7 @@
     "node": ">=20",
     "pnpm": ">=9"
   },
+  "packageManager": "pnpm@9.1.0",
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild",

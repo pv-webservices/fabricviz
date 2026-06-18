@@ -20,7 +20,7 @@ import {
 export default async function fabricRoutes(fastify: FastifyInstance) {
 
   // ── GET /api/fabrics ───────────────────────────
-  fastify.get('/api/fabrics', async (request: FastifyRequest, reply: FastifyReply) => {
+  fastify.get<{ Params: { id: string } }>('/api/fabrics', async (request: any, reply: any) => {
     const parsed = fabricQuerySchema.safeParse(request.query);
     if (!parsed.success) {
       return reply.status(400).send(error('VALIDATION_ERROR', parsed.error.issues[0].message));
@@ -30,7 +30,7 @@ export default async function fabricRoutes(fastify: FastifyInstance) {
   });
 
   // ── GET /api/fabrics/:id ───────────────────────
-  fastify.get('/api/fabrics/:id', async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+  fastify.get('/api/fabrics/:id', async (request: any, reply: any) => {
     const fabric = await getFabricById(fastify.db, request.params.id);
     if (!fabric) {
       return reply.status(404).send(error('NOT_FOUND', 'Fabric not found'));
@@ -39,10 +39,10 @@ export default async function fabricRoutes(fastify: FastifyInstance) {
   });
 
   // ── POST /api/fabrics ──────────────────────────
-  fastify.post(
+  fastify.post<{ Params: { id: string } }>(
     '/api/fabrics',
     { preHandler: [requireAdmin] },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
       const parsed = createFabricSchema.safeParse(request.body);
       if (!parsed.success) {
         return reply.status(400).send(error('VALIDATION_ERROR', parsed.error.issues[0].message));
@@ -68,7 +68,7 @@ export default async function fabricRoutes(fastify: FastifyInstance) {
   fastify.put(
     '/api/fabrics/:id',
     { preHandler: [requireAdmin] },
-    async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
       const parsed = updateFabricSchema.safeParse(request.body);
       if (!parsed.success) {
         return reply.status(400).send(error('VALIDATION_ERROR', parsed.error.issues[0].message));
@@ -97,10 +97,10 @@ export default async function fabricRoutes(fastify: FastifyInstance) {
   );
 
   // ── DELETE /api/fabrics/:id ────────────────────
-  fastify.delete(
+  fastify.delete<{ Params: { id: string } }>(
     '/api/fabrics/:id',
     { preHandler: [requireAdmin] },
-    async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
       const existing = await getFabricById(fastify.db, request.params.id);
       if (!existing) {
         return reply.status(404).send(error('NOT_FOUND', 'Fabric not found'));
@@ -126,7 +126,7 @@ export default async function fabricRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/fabrics/import',
     { preHandler: [requireAdmin] },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
       const parsed = bulkImportSchema.safeParse(request.body);
       if (!parsed.success) {
         return reply.status(400).send(error('VALIDATION_ERROR', parsed.error.issues[0].message));

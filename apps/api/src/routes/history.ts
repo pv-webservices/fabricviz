@@ -14,10 +14,10 @@ const historyQuerySchema = z.object({
 export default async function historyRoutes(fastify: FastifyInstance) {
 
   // ── GET /api/history ───────────────────────────
-  fastify.get(
+  fastify.get<{ Params: { id: string } }>(
     '/api/history',
     { preHandler: [authenticate] },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
       const parsed = historyQuerySchema.safeParse(request.query);
       if (!parsed.success) {
         return reply.status(400).send(error('VALIDATION_ERROR', parsed.error.issues[0].message));
@@ -41,7 +41,7 @@ export default async function historyRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/history/:id',
     { preHandler: [authenticate] },
-    async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
       const user = request.user as TokenPayload;
       const accessCodeId = 'accessCodeId' in user ? user.accessCodeId : undefined;
 
@@ -60,10 +60,10 @@ export default async function historyRoutes(fastify: FastifyInstance) {
   );
 
   // ── DELETE /api/history/:id ────────────────────
-  fastify.delete(
+  fastify.delete<{ Params: { id: string } }>(
     '/api/history/:id',
     { preHandler: [requireAdmin] },
-    async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
       const item = await getHistoryItem(fastify.db, request.params.id);
       if (!item) {
         return reply.status(404).send(error('NOT_FOUND', 'Visualization not found'));

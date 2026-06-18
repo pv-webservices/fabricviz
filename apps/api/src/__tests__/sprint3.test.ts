@@ -6,7 +6,7 @@ import {
 } from '../validators/access-code-validators';
 import {
   createRequestSchema,
-  updateRequestStatusSchema,
+  updateRequestSchema,
   requestQuerySchema,
 } from '../validators/request-validators';
 import { trackEventSchema } from '../validators/analytics-validators';
@@ -78,14 +78,14 @@ describe('createRequestSchema', () => {
   });
 });
 
-describe('updateRequestStatusSchema', () => {
+describe('updateRequestSchema', () => {
   it('should accept valid status', () => {
-    const result = updateRequestStatusSchema.safeParse({ status: 'approved' });
+    const result = updateRequestSchema.safeParse({ status: 'approved' });
     expect(result.success).toBe(true);
   });
 
   it('should reject invalid status', () => {
-    const result = updateRequestStatusSchema.safeParse({ status: 'done' });
+    const result = updateRequestSchema.safeParse({ status: 'done' });
     expect(result.success).toBe(false);
   });
 });

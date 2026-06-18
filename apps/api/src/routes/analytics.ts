@@ -10,7 +10,7 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/analytics/track',
     { preHandler: [authenticate] },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
       const parsed = trackEventSchema.safeParse(request.body);
       if (!parsed.success) {
         return reply.status(400).send(error('VALIDATION_ERROR', parsed.error.issues[0].message));
@@ -29,7 +29,7 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/analytics/dashboard',
     { preHandler: [requireAdmin] },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
       const dashboard = await getAnalyticsDashboard(fastify.db);
       return reply.send(success(dashboard));
     },

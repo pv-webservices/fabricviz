@@ -12,20 +12,20 @@ const grantCreditsSchema = z.object({
 export default async function creditRoutes(fastify: FastifyInstance) {
 
   // ── GET /api/credits/:accessCodeId/history ──────
-  fastify.get(
+  fastify.get<{ Params: { accessCodeId: string } }>(
     '/api/credits/:accessCodeId/history',
     { preHandler: [requireAdmin] },
-    async (request: FastifyRequest<{ Params: { accessCodeId: string } }>, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
       const history = await getCreditHistory(fastify.db, request.params.accessCodeId);
       return reply.send(success(history));
     }
   );
 
   // ── POST /api/credits/:accessCodeId/grant ───────
-  fastify.post(
+  fastify.post<{ Params: { accessCodeId: string } }>(
     '/api/credits/:accessCodeId/grant',
     { preHandler: [requireAdmin] },
-    async (request: FastifyRequest<{ Params: { accessCodeId: string } }>, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
       const parsed = grantCreditsSchema.safeParse(request.body);
       if (!parsed.success) {
         return reply.status(400).send(error('VALIDATION_ERROR', parsed.error.issues[0].message));

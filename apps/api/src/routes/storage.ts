@@ -9,7 +9,7 @@ export default async function storageRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/storage/dashboard',
     { preHandler: [requireAdmin] },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
       const snapshots = await getStorageSnapshots(fastify.db);
       const latestSnapshot = snapshots.length > 0 ? snapshots[0] : { total_bytes: 0, total_files: 0 };
       
@@ -30,7 +30,7 @@ export default async function storageRoutes(fastify: FastifyInstance) {
   fastify.delete(
     '/api/storage/cleanup',
     { preHandler: [requireAdmin] },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
       // In a real implementation, this would query inactive visualizations
       // and issue delete commands to the cloud storage bucket.
       const res = await fastify.db.query(

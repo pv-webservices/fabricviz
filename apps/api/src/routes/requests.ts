@@ -18,10 +18,10 @@ import { grantCredits } from '../services/credit-service';
 export default async function requestRoutes(fastify: FastifyInstance) {
 
   // ── GET /api/requests ──────────────────────────
-  fastify.get(
+  fastify.get<{ Params: { id: string } }>(
     '/api/requests',
     { preHandler: [requireAdmin] },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
       const parsed = requestQuerySchema.safeParse(request.query);
       if (!parsed.success) {
         return reply.status(400).send(error('VALIDATION_ERROR', parsed.error.issues[0].message));
@@ -35,7 +35,7 @@ export default async function requestRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/requests/:id',
     { preHandler: [requireAdmin] },
-    async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
       const req = await getRequestById(fastify.db, request.params.id);
       if (!req) {
         return reply.status(404).send(error('NOT_FOUND', 'Request not found'));
@@ -45,9 +45,9 @@ export default async function requestRoutes(fastify: FastifyInstance) {
   );
 
   // ── POST /api/requests ─────────────────────────
-  fastify.post(
+  fastify.post<{ Params: { id: string } }>(
     '/api/requests',
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
       // Public endpoint for customers to submit requests
       const parsed = createRequestSchema.safeParse(request.body);
       if (!parsed.success) {
@@ -63,7 +63,7 @@ export default async function requestRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/requests/:id',
     { preHandler: [requireAdmin] },
-    async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    async (request: any, reply: any) => {
       const parsed = updateRequestSchema.safeParse(request.body);
       if (!parsed.success) {
         return reply.status(400).send(error('VALIDATION_ERROR', parsed.error.issues[0].message));

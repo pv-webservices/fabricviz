@@ -1,0 +1,12 @@
+# Production Docker Compose Override
+services:
+  api:
+    volumes: []
+    restart: always
+
+  worker:
+    volumes: []
+    restart: always
+
+  nginx:
+    restart: always

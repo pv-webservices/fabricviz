@@ -10,6 +10,7 @@
     "seed": "npx tsx scripts/seed-dev.ts"
   },
   "devDependencies": {
+    "tsx": "^4.9.3",
     "turbo": "^2.0.0"
   },
   "engines": {
@@ -22,5 +23,8 @@
       "esbuild",
       "msgpackr-extract"
     ]
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2"
   }
 }

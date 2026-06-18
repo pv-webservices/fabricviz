@@ -16,10 +16,9 @@ export default function CollectionDetailPage({ params }: { params: { id: string 
   useEffect(() => {
     async function load() {
       try {
-        // We'll fetch fabrics and filter by collectionId client-side if server filtering isn't strict
-        const fabricsData = await fetchApi<{ items: any[] }>(`/api/fabrics?limit=100`, { requireAuth: true });
-        const collectionFabrics = fabricsData.items.filter(f => f.collection_id === params.id);
-        setFabrics(collectionFabrics);
+        // Fetch fabrics specifically for this collection
+        const fabricsData = await fetchApi<{ items: any[] }>(`/api/collections/${params.id}/fabrics`, { requireAuth: true });
+        setFabrics(fabricsData.items);
 
         // Fetch collection details (fallback to matching from the fabrics list or API)
         try {

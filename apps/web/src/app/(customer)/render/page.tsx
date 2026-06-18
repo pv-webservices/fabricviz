@@ -25,7 +25,7 @@ function RenderContent() {
     async function startRender() {
       setStatus('starting');
       try {
-        const data = await fetchApi<{ jobId: string }>('/api/renders', {
+        const data = await fetchApi<{ jobId: string }>('/api/render-jobs', {
           method: 'POST',
           requireAuth: true,
           body: JSON.stringify({ fabricId, roomId, uploadUrl }),
@@ -47,7 +47,7 @@ function RenderContent() {
 
     async function pollStatus() {
       try {
-        const data = await fetchApi<{ status: string; visualizationId?: string }>('/api/renders/' + jobId + '/status', { requireAuth: true });
+        const data = await fetchApi<{ status: string; visualizationId?: string }>('/api/render-jobs/' + jobId, { requireAuth: true });
         
         if (data.status === 'completed' && data.visualizationId) {
           setStatus('completed');

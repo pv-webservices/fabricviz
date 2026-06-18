@@ -4,7 +4,7 @@ import { BarChart3, Image as ImageIcon, Users } from 'lucide-react';
 
 async function getSummary(token: string) {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/analytics/summary`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/analytics/dashboard`, {
       headers: {
         Authorization: `Bearer ${token}`
       },

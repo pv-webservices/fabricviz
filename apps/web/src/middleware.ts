@@ -1,22 +1,31 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+const CUSTOMER_ROUTES = ['/fabrics', '/rooms', '/render', '/history'];
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  const token = request.cookies.get('token')?.value;
+
   // Protect /admin routes
   if (pathname.startsWith('/admin')) {
-    // Allow login page without token
-    if (pathname === '/admin/login') {
-      return NextResponse.next();
-    }
-
-    const token = request.cookies.get('token')?.value;
-
+    if (pathname === '/admin/login') return NextResponse.next();
     if (!token) {
-      // Redirect to login if no token
       const url = request.nextUrl.clone();
       url.pathname = '/admin/login';
+      return NextResponse.redirect(url);
+    }
+    return NextResponse.next();
+  }
+
+  // Protect customer routes
+  const isCustomerRoute = CUSTOMER_ROUTES.some(route => pathname.startsWith(route));
+  
+  if (isCustomerRoute) {
+    if (!token) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/login';
       return NextResponse.redirect(url);
     }
   }
@@ -25,5 +34,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*'],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 };

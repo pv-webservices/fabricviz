@@ -4,6 +4,7 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'FabricViz AI',
   description: 'AI Fabric Visualization',
+  manifest: '/manifest.json',
 };
 
 export const viewport: Viewport = {

@@ -144,7 +144,7 @@ export async function deleteCollection(
   id: string,
 ): Promise<boolean> {
   const result = await db.query(
-    `UPDATE collections SET active = false, updated_at = NOW() WHERE id = $1`,
+    `DELETE FROM collections WHERE id = $1`,
     [id],
   );
   return (result.rowCount ?? 0) > 0;

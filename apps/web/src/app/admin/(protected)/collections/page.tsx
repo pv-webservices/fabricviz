@@ -18,9 +18,11 @@ export default function CollectionsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('created_at');
   const [sortOrder, setSortOrder] = useState('desc');
+  const [statusFilter, setStatusFilter] = useState('active');
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [collectionToDelete, setCollectionToDelete] = useState<any>(null);
   const [formData, setFormData] = useState({ 
     name: '', 
     description: '', 
@@ -43,6 +45,8 @@ export default function CollectionsPage() {
     try {
       const query = new URLSearchParams({ limit: '50', sortBy, sortOrder });
       if (searchTerm) query.append('search', searchTerm);
+      if (statusFilter === 'active') query.append('active', 'true');
+      if (statusFilter === 'inactive') query.append('active', 'false');
       
       const data = await fetchApi<{ items: any[] }>(`/api/collections?${query.toString()}`, { requireAuth: true });
       setCollections(data.items);
@@ -52,7 +56,7 @@ export default function CollectionsPage() {
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, sortBy, sortOrder, toast]);
+  }, [searchTerm, sortBy, sortOrder, statusFilter, toast]);
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
@@ -91,7 +95,6 @@ export default function CollectionsPage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      // Clean up empty strings so Zod url/uuid validators don't fail
       const payload: any = { ...formData };
       if (!payload.description) delete payload.description;
       if (!payload.thumbnailUrl) delete payload.thumbnailUrl;
@@ -120,14 +123,32 @@ export default function CollectionsPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this collection?')) return;
+  const handleDeletePermanently = async () => {
+    if (!collectionToDelete) return;
+    if (!confirm('Are you sure? This cannot be undone.')) return;
     try {
-      await fetchApi(`/api/collections/${id}`, { method: 'DELETE', requireAuth: true });
-      toast({ title: 'Success', description: 'Collection deleted' });
+      await fetchApi(`/api/collections/${collectionToDelete.id}`, { method: 'DELETE', requireAuth: true });
+      toast({ title: 'Success', description: 'Collection permanently deleted' });
+      setCollectionToDelete(null);
       load();
     } catch (err: any) {
       toast({ title: 'Error', description: err.message || 'Failed to delete', variant: 'destructive' });
+    }
+  };
+
+  const handleMarkInactive = async () => {
+    if (!collectionToDelete) return;
+    try {
+      await fetchApi(`/api/collections/${collectionToDelete.id}`, { 
+        method: 'PUT', 
+        requireAuth: true,
+        body: JSON.stringify({ ...collectionToDelete, active: false }),
+      });
+      toast({ title: 'Success', description: 'Collection marked as inactive' });
+      setCollectionToDelete(null);
+      load();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message || 'Failed to update', variant: 'destructive' });
     }
   };
 
@@ -189,6 +210,15 @@ export default function CollectionsPage() {
         <div className="flex items-center gap-2">
           <select 
             className="h-10 rounded-md border border-input bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value)}
+          >
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="all">All Statuses</option>
+          </select>
+          <select 
+            className="h-10 rounded-md border border-input bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
             value={sortBy}
             onChange={e => setSortBy(e.target.value)}
           >
@@ -244,14 +274,14 @@ export default function CollectionsPage() {
                   <Button 
                     variant="secondary" 
                     className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-900" 
-                    onClick={() => router.push(`/admin/fabrics?collection_id=${col.id}`)}
+                    onClick={() => router.push(`/admin/collections/${col.id}/fabrics`)}
                   >
                     <Package className="mr-2 h-4 w-4" /> Fabrics
                   </Button>
                   <Button variant="outline" size="icon" onClick={() => openModal(col)} title="Edit">
                     <Edit className="h-4 w-4 text-slate-600" />
                   </Button>
-                  <Button variant="outline" size="icon" onClick={() => handleDelete(col.id)} title="Delete">
+                  <Button variant="outline" size="icon" onClick={() => setCollectionToDelete(col)} title="Delete">
                     <Trash2 className="h-4 w-4 text-slate-600" />
                   </Button>
                 </div>
@@ -260,6 +290,31 @@ export default function CollectionsPage() {
           ))}
         </div>
       )}
+
+      <Modal isOpen={!!collectionToDelete} onClose={() => setCollectionToDelete(null)} title="Delete Collection">
+        <div className="space-y-4 pt-2">
+          <p className="text-sm text-slate-600">
+            How would you like to handle the deletion of <strong>{collectionToDelete?.name}</strong>?
+          </p>
+          <div className="flex flex-col gap-3">
+            <Button variant="outline" className="justify-start h-auto p-4" onClick={handleMarkInactive}>
+              <div className="text-left">
+                <div className="font-semibold text-slate-900">Mark as Inactive</div>
+                <div className="text-xs text-slate-500 mt-1">Keeps the collection in the database but hides it from customers.</div>
+              </div>
+            </Button>
+            <Button variant="destructive" className="justify-start h-auto p-4" onClick={handleDeletePermanently}>
+              <div className="text-left">
+                <div className="font-semibold">Delete Permanently</div>
+                <div className="text-xs text-white/80 mt-1">Removes the collection entirely. This action cannot be undone.</div>
+              </div>
+            </Button>
+          </div>
+          <div className="pt-4 flex justify-end gap-2 border-t mt-4">
+            <Button variant="ghost" onClick={() => setCollectionToDelete(null)}>Cancel</Button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingId ? 'Edit Collection' : 'Add Collection'}>
         <form onSubmit={handleSave} className="space-y-5 pt-2">

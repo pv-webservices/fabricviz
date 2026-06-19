@@ -19,7 +19,6 @@ import { cn } from '@/lib/utils';
 const navigation = [
   { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
   { name: 'Collections', href: '/admin/collections', icon: Layers },
-  { name: 'Fabrics', href: '/admin/fabrics', icon: Palette },
   { name: 'Rooms', href: '/admin/rooms', icon: ImageIcon },
   { name: 'Customers', href: '/admin/customers', icon: Users },
   { name: 'Requests', href: '/admin/requests', icon: Inbox },

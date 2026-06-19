@@ -22,6 +22,8 @@ export const collectionQuerySchema = z.object({
   endUse: endUseEnum.optional(),
   active: z.preprocess((v) => v === 'true' ? true : v === 'false' ? false : v, z.boolean().optional()),
   search: z.string().optional(),
+  sortBy: z.enum(['created_at', 'name', 'display_order']).optional().default('created_at'),
+  sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
   page: z.coerce.number().int().positive().optional().default(1),
   limit: z.coerce.number().int().positive().max(100).optional().default(20),
 });

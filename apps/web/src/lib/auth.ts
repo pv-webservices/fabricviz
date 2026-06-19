@@ -8,12 +8,13 @@ export function setAuthToken(token: string) {
     expires: 7, // 7 days
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
+    path: '/',
   });
 }
 
 export function removeAuthToken() {
-  Cookies.remove(AUTH_TOKEN_KEY);
-  Cookies.remove(AUTH_USER_KEY);
+  Cookies.remove(AUTH_TOKEN_KEY, { path: '/' });
+  Cookies.remove(AUTH_USER_KEY, { path: '/' });
 }
 
 export function getAuthToken() {
@@ -26,6 +27,7 @@ export function setAuthUser(user: any) {
     expires: 7,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
+    path: '/',
   });
 }
 

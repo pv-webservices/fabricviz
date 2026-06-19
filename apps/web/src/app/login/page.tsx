@@ -1,7 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useCallback } from 'react';
 import { fetchApi } from '@/lib/api';
 import { setAuthToken, setAuthUser } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
@@ -10,13 +9,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { AlertCircle } from 'lucide-react';
 
 export default function CustomerLoginPage() {
-  const router = useRouter();
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async (e: any) => {
-    e.preventDefault();
+  const handleLogin = useCallback(async () => {
     setError('');
     
     if (code.length !== 5) {
@@ -36,13 +33,18 @@ export default function CustomerLoginPage() {
       setAuthToken(data.token);
       setAuthUser(data.customer);
       
-      router.push('/');
+      // Use hard navigation so the middleware picks up the freshly set cookie
+      window.location.href = '/';
     } catch (err: any) {
       setError(err.message || 'Invalid access code');
-    } finally {
       setLoading(false);
     }
-  };
+  }, [code]);
+
+  const onSubmit = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    handleLogin();
+  }, [handleLogin]);
 
   return (
     <div className="flex min-h-[100dvh] w-full items-center justify-center bg-slate-50 px-4 py-12">
@@ -52,7 +54,7 @@ export default function CustomerLoginPage() {
           <CardDescription className="text-base">Enter your 5-digit access code</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin} className="space-y-6">
+          <form action="javascript:void(0)" onSubmit={onSubmit} className="space-y-6">
             {error && (
               <div className="flex items-center gap-2 rounded-md bg-red-50 p-3 text-sm text-red-600">
                 <AlertCircle className="h-4 w-4 shrink-0" />
@@ -66,7 +68,6 @@ export default function CustomerLoginPage() {
                 placeholder="e.g. AB123"
                 className="text-center text-2xl tracking-widest uppercase h-14 font-semibold"
                 maxLength={5}
-                required
                 value={code}
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
                 disabled={loading}
@@ -85,3 +86,4 @@ export default function CustomerLoginPage() {
     </div>
   );
 }
+

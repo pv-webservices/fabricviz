@@ -46,12 +46,23 @@ export async function listCollections(
   const total = parseInt(countResult.rows[0].count, 10);
 
   const offset = (filters.page - 1) * filters.limit;
-  const rows = await db.query<CollectionRow>(
-    `SELECT * FROM collections ${where} ORDER BY display_order ASC, created_at DESC LIMIT $${idx++} OFFSET $${idx++}`,
+  const sortCol = filters.sortBy === 'name' ? 'c.name' : filters.sortBy === 'display_order' ? 'c.display_order' : 'c.created_at';
+  const sortDir = filters.sortOrder === 'asc' ? 'ASC' : 'DESC';
+
+  const rows = await db.query<CollectionRow & { fabric_count: string }>(
+    `SELECT c.*, 
+      (SELECT COUNT(*) FROM fabrics WHERE collection_id = c.id AND active = true) AS fabric_count
+     FROM collections c ${where.replace(/end_use/g, 'c.end_use').replace(/active/g, 'c.active').replace(/name/g, 'c.name')} 
+     ORDER BY ${sortCol} ${sortDir} LIMIT $${idx++} OFFSET $${idx++}`,
     [...params, filters.limit, offset],
   );
 
-  return { items: rows.rows, total };
+  const items = rows.rows.map(r => ({
+    ...r,
+    fabricCount: parseInt(r.fabric_count, 10),
+  }));
+
+  return { items, total };
 }
 
 export async function getCollectionById(

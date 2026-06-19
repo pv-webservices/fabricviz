@@ -45,6 +45,12 @@ async function start() {
       }
     });
 
+    // Serve local uploads when STORAGE_MODE is local
+    await fastify.register(require('@fastify/static'), {
+      root: require('path').resolve(process.env.LOCAL_UPLOAD_DIR || './uploads'),
+      prefix: '/uploads/',
+    });
+
     await fastify.register(dbPlugin);
     await fastify.register(redisPlugin);
 

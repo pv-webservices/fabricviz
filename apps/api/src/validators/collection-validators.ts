@@ -5,7 +5,7 @@ const endUseEnum = z.enum(['sofa', 'curtain', 'rug', 'wallpaper', 'both']);
 export const createCollectionSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   description: z.string().optional(),
-  thumbnailUrl: z.string().url().optional(),
+  thumbnailUrl: z.string().optional(),
   groupId: z.string().uuid().optional(),
   endUse: endUseEnum,
   qrCode: z.string().optional(),

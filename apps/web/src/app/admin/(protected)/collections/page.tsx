@@ -32,6 +32,12 @@ export default function CollectionsPage() {
   });
   const { toast } = useToast();
 
+  const getImageUrl = (url: string) => {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    return `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}${url}`;
+  };
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -215,7 +221,7 @@ export default function CollectionsPage() {
             <div key={col.id} className="group flex flex-col rounded-xl border bg-white shadow-sm overflow-hidden hover:shadow-md transition-all">
               <div className="aspect-[4/3] bg-slate-100 relative overflow-hidden flex items-center justify-center">
                 {col.thumbnail_url ? (
-                  <img src={col.thumbnail_url} alt={col.name} className="object-cover w-full h-full" />
+                  <img src={getImageUrl(col.thumbnail_url)} alt={col.name} className="object-cover w-full h-full" />
                 ) : (
                   <ImageIcon className="h-10 w-10 text-slate-300" />
                 )}
@@ -283,7 +289,7 @@ export default function CollectionsPage() {
                 className="cursor-pointer file:cursor-pointer"
               />
               {formData.thumbnailUrl && (
-                <img src={formData.thumbnailUrl} alt="Preview" className="h-10 w-10 rounded-md object-cover border" />
+                <img src={getImageUrl(formData.thumbnailUrl)} alt="Preview" className="h-10 w-10 rounded-md object-cover border" />
               )}
             </div>
           </div>

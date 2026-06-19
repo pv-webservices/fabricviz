@@ -18,13 +18,6 @@ export default function FabricDetailPage({ params }: { params: { id: string } })
         setFabric(data);
       } catch (err) {
         console.error('Failed to load fabric', err);
-        // Fallback for UI visualization testing
-        setFabric({
-          id: params.id,
-          name: 'Demo Fabric',
-          code: 'DEMO-123',
-          swatch_url: 'https://placehold.co/600x600/3b82f6/ffffff?text=Fabric+Swatch'
-        });
       } finally {
         setLoading(false);
       }

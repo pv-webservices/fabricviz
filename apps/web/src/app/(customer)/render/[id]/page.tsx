@@ -15,18 +15,11 @@ export default function RenderResultPage({ params }: { params: { id: string } })
   useEffect(() => {
     async function load() {
       try {
-        // Assuming there is an endpoint to fetch the visualization result
-        const data = await fetchApi<any>(`/api/visualizations/${params.id}`, { requireAuth: true });
+        // Fetch the visualization result via the public result endpoint or history
+        const data = await fetchApi<any>(`/api/results/${params.id}`, { requireAuth: true });
         setResult(data);
       } catch (err) {
         console.error('Failed to load result', err);
-        // Fallback for demo purposes if endpoint doesn't exist
-        setResult({
-          id: params.id,
-          before_url: 'https://placehold.co/600x400/eeeeee/999999?text=Original+Room',
-          after_url: 'https://placehold.co/600x400/3b82f6/ffffff?text=Rendered+Room',
-          fabric: { name: 'Demo Fabric', code: 'DF-001' }
-        });
       } finally {
         setLoading(false);
       }

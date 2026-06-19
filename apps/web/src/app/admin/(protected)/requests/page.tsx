@@ -23,6 +23,22 @@ export default function RequestsPage() {
     load();
   }, []);
 
+  const handleUpdateStatus = async (id: string, status: string) => {
+    try {
+      await fetchApi(`/api/requests/${id}`, {
+        method: 'PATCH',
+        requireAuth: true,
+        body: JSON.stringify({ status })
+      });
+      // reload
+      const data = await fetchApi<{ items: any[] }>('/api/requests?limit=50', { requireAuth: true });
+      setRequests(data.items);
+    } catch (err) {
+      console.error('Failed to update request', err);
+      alert('Failed to update request');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -58,8 +74,8 @@ export default function RequestsPage() {
                     </span>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="outline" size="sm" className="mr-2">Approve</Button>
-                    <Button variant="ghost" size="sm" className="text-red-500">Reject</Button>
+                    <Button variant="outline" size="sm" className="mr-2" onClick={() => handleUpdateStatus(req.id, 'approved')}>Approve</Button>
+                    <Button variant="ghost" size="sm" className="text-red-500" onClick={() => handleUpdateStatus(req.id, 'rejected')}>Reject</Button>
                   </TableCell>
                 </TableRow>
               ))

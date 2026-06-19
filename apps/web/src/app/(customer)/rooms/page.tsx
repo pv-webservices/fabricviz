@@ -43,7 +43,7 @@ function RoomsContent() {
   };
 
   const confirmRender = (zone?: string) => {
-    router.push(`/render?fabricId=${fabricId}&roomId=${selectedRoom.id}${zone ? `&zone=${zone}` : ''}`);
+    router.push(`/render?fabricId=${fabricId}&roomId=${selectedRoom.id}&objectType=sofa&sourceType=predefined_room${zone ? `&zone=${zone}` : ''}`);
   };
 
   const handleUpload = () => {
@@ -53,7 +53,7 @@ function RoomsContent() {
       return;
     }
     const fakeUploadedUrl = 'https://example.com/uploaded-room.jpg';
-    router.push(`/render?fabricId=${fabricId}&uploadUrl=${encodeURIComponent(fakeUploadedUrl)}`);
+    router.push(`/render?fabricId=${fabricId}&uploadUrl=${encodeURIComponent(fakeUploadedUrl)}&objectType=sofa&sourceType=upload`);
   };
 
   if (selectedRoom) {

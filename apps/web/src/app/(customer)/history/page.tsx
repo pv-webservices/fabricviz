@@ -14,7 +14,7 @@ export default function HistoryPage() {
   useEffect(() => {
     async function load() {
       try {
-        const data = await fetchApi<{ items: any[] }>('/api/visualizations?limit=30', { requireAuth: true });
+        const data = await fetchApi<{ items: any[] }>('/api/history?limit=30', { requireAuth: true });
         setHistory(data.items);
       } catch (err) {
         console.error('Failed to load history', err);

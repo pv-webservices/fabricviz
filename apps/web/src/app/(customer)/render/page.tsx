@@ -11,6 +11,8 @@ function RenderContent() {
   const fabricId = searchParams.get('fabricId');
   const roomId = searchParams.get('roomId');
   const uploadUrl = searchParams.get('uploadUrl');
+  const objectType = searchParams.get('objectType') || 'sofa';
+  const sourceType = searchParams.get('sourceType') || 'predefined_room';
 
   const [status, setStatus] = useState('initializing');
   const [error, setError] = useState('');
@@ -25,10 +27,10 @@ function RenderContent() {
     async function startRender() {
       setStatus('starting');
       try {
-        const data = await fetchApi<{ jobId: string }>('/api/render-jobs', {
+        const data = await fetchApi<{ jobId: string }>('/api/renders', {
           method: 'POST',
           requireAuth: true,
-          body: JSON.stringify({ fabricId, roomId, uploadUrl }),
+          body: JSON.stringify({ fabricId, roomId, uploadUrl, objectType, sourceType }),
         });
         setJobId(data.jobId);
         setStatus('processing');
@@ -38,7 +40,7 @@ function RenderContent() {
       }
     }
     startRender();
-  }, [fabricId, roomId, uploadUrl]);
+  }, [fabricId, roomId, uploadUrl, objectType, sourceType]);
 
   useEffect(() => {
     if (!jobId || status !== 'processing') return;
@@ -47,7 +49,7 @@ function RenderContent() {
 
     async function pollStatus() {
       try {
-        const data = await fetchApi<{ status: string; visualizationId?: string }>('/api/render-jobs/' + jobId, { requireAuth: true });
+        const data = await fetchApi<{ status: string; visualizationId?: string }>('/api/renders/' + jobId + '/status', { requireAuth: true });
         
         if (data.status === 'completed' && data.visualizationId) {
           setStatus('completed');

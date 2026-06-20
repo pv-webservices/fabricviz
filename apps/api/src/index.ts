@@ -22,6 +22,7 @@ import resultRoutes from './routes/results';
 import customerRoutes from './routes/customers';
 import creditRoutes from './routes/credits';
 import settingsRoutes from './routes/settings';
+import scraperRoutes from './routes/scraper';
 
 import fastifyMultipart from '@fastify/multipart';
 import fastifyRateLimit from '@fastify/rate-limit';
@@ -73,6 +74,7 @@ async function start() {
     await fastify.register(customerRoutes);
     await fastify.register(creditRoutes);
     await fastify.register(settingsRoutes);
+    await fastify.register(scraperRoutes);
 
     const port = env.PORT;
     await fastify.listen({ port, host: '0.0.0.0' });

@@ -56,6 +56,7 @@ export default function CollectionFabricsPage({ params }: { params: { id: string
   const [isImportLocalModalOpen, setIsImportLocalModalOpen] = useState(false);
   const [localData, setLocalData] = useState<any[]>([]);
   const [isUploadingLocal, setIsUploadingLocal] = useState(false);
+  const [isAnalyzingLocal, setIsAnalyzingLocal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const getImageUrl = (url: string) => {
@@ -380,6 +381,22 @@ export default function CollectionFabricsPage({ params }: { params: { id: string
     if (fileInputRef.current) fileInputRef.current.value = ''; // Reset input
   };
 
+  const handleAnalyzeAll = async () => {
+    setIsAnalyzingLocal(true);
+    // Mocking an AI analysis delay
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    setLocalData(prev => prev.map(item => ({
+      ...item,
+      colorFamily: item.colorFamily || 'Neutral',
+      quality: item.quality || 'Premium',
+      endUse: item.endUse || 'Upholstery',
+      tags: ['New Arrival'],
+      analyzed: true
+    })));
+    setIsAnalyzingLocal(false);
+    toast({ title: 'Analysis Complete', description: `Successfully analyzed ${localData.length} images.` });
+  };
+
   const handleLocalRowChange = (index: number, field: string, value: any) => {
     const newData = [...localData];
     newData[index] = { ...newData[index], [field]: value };
@@ -565,39 +582,70 @@ export default function CollectionFabricsPage({ params }: { params: { id: string
       </Modal>
 
       {/* Import Excel Modal */}
-      <Modal isOpen={isImportExcelModalOpen} onClose={() => setIsImportExcelModalOpen(false)} title="Import Fabrics">
+      <Modal isOpen={isImportExcelModalOpen} onClose={() => setIsImportExcelModalOpen(false)} title="Import Fabrics from Excel" className="max-w-4xl">
         <div className="space-y-4 pt-2">
-          {excelData.length === 0 ? (
-            <div className="border-2 border-dashed border-slate-700 rounded-lg p-12 text-center space-y-4 text-slate-300">
-              <Upload className="mx-auto h-8 w-8 text-slate-500" />
-              <div>
-                <p className="text-sm font-medium text-white">Click to upload Excel</p>
-                <p className="text-xs text-slate-500 mt-1">.xlsx or .csv files with standard columns</p>
-              </div>
-              <Input type="file" accept=".xlsx, .xls, .csv" onChange={handleImportExcelFile} className="max-w-[250px] mx-auto cursor-pointer border-slate-700 text-slate-300" />
+          <p className="text-sm text-slate-400">Upload an Excel file with fabric details and Google Drive image links</p>
+          
+          <div className="flex items-center justify-between bg-[#1e1e1e] border border-slate-800 rounded-md p-4">
+            <div>
+              <h5 className="text-white font-medium">Need a template?</h5>
+              <p className="text-sm text-slate-400">Download our Excel template with example data</p>
             </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h4 className="font-bold text-white">Ready to import {excelData.length} fabrics</h4>
-                <Button onClick={handleSaveImportedExcel} disabled={isImporting} className="bg-red-600 hover:bg-red-700 text-white">
-                  {isImporting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Confirm Import
-                </Button>
-              </div>
-              <div className="overflow-x-auto border border-slate-700 rounded-md max-h-[400px]">
+            <Button variant="outline" className="border-slate-700 bg-[#1a1a1a] text-white hover:bg-slate-800" onClick={() => {
+              // Basic template generation
+              const ws = XLSX.utils.json_to_sheet([{ name: 'Example', code: 'EX-01', colorFamily: 'Blue', quality: 'Standard', fabricWidthCm: 140, priceInr: 1000, endUse: 'sofa', features: 'high_martindale' }]);
+              const wb = XLSX.utils.book_new();
+              XLSX.utils.book_append_sheet(wb, ws, "Template");
+              XLSX.writeFile(wb, "fabric_template.xlsx");
+            }}>
+              <Download className="mr-2 h-4 w-4" /> Download Template
+            </Button>
+          </div>
+
+          <div className="border border-red-600 rounded-md p-3 bg-[#1e1e1e] flex items-center">
+            <span className="text-sm text-white font-medium mr-2">Choose File</span>
+            <span className="text-sm text-slate-300 flex-1 truncate">{excelData.length > 0 ? "Uploaded Data" : "No file chosen"}</span>
+            <Input type="file" accept=".xlsx, .xls, .csv" onChange={handleImportExcelFile} className="absolute opacity-0 w-full cursor-pointer h-10" style={{ marginLeft: '-80px' }} />
+          </div>
+
+          {excelData.length > 0 && (
+            <div className="space-y-2 mt-4">
+              <h4 className="font-bold text-white">Preview (first {Math.min(5, excelData.length)} rows)</h4>
+              <div className="overflow-x-auto border border-slate-700 rounded-md">
                 <table className="w-full text-sm text-left text-slate-300">
-                  <thead className="text-xs text-slate-400 uppercase bg-[#2a2a2a] sticky top-0">
-                    <tr><th className="px-4 py-3">Code</th><th className="px-4 py-3">Name</th><th className="px-4 py-3">Price</th></tr>
+                  <thead className="text-xs text-white font-semibold bg-[#2a2a2a] sticky top-0">
+                    <tr>
+                      <th className="px-4 py-3">Name</th>
+                      <th className="px-4 py-3">Code</th>
+                      <th className="px-4 py-3">Color</th>
+                      <th className="px-4 py-3">Quality</th>
+                      <th className="px-4 py-3">Width</th>
+                      <th className="px-4 py-3">Price</th>
+                      <th className="px-4 py-3">End Use</th>
+                      <th className="px-4 py-3">Features</th>
+                    </tr>
                   </thead>
-                  <tbody>
-                    {excelData.slice(0, 20).map((row, idx) => (
-                      <tr key={idx} className="border-b border-slate-800 bg-[#1e1e1e]">
-                        <td className="px-4 py-3">{row.code}</td><td className="px-4 py-3">{row.name}</td><td className="px-4 py-3">{row.priceInr}</td>
+                  <tbody className="divide-y divide-slate-800 bg-[#1a1a1a]">
+                    {excelData.slice(0, 5).map((row, idx) => (
+                      <tr key={idx} className="hover:bg-slate-800/30">
+                        <td className="px-4 py-3">{row.name || '-'}</td>
+                        <td className="px-4 py-3">{row.code || '-'}</td>
+                        <td className="px-4 py-3">{row.colorFamily || '-'}</td>
+                        <td className="px-4 py-3">{row.quality || '-'}</td>
+                        <td className="px-4 py-3">{row.fabricWidthCm || '-'}</td>
+                        <td className="px-4 py-3">₹{row.priceInr || '-'}</td>
+                        <td className="px-4 py-3">{row.endUse || '-'}</td>
+                        <td className="px-4 py-3">-</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-                {excelData.length > 20 && <div className="p-3 text-center text-xs text-slate-500 bg-[#1e1e1e]">Showing first 20 rows...</div>}
+              </div>
+              <div className="pt-4 flex justify-end gap-3">
+                 <Button variant="outline" onClick={() => { setIsImportExcelModalOpen(false); setExcelData([]); }} className="bg-transparent border-slate-700 text-slate-300 hover:bg-slate-800">Cancel</Button>
+                 <Button onClick={handleSaveImportedExcel} disabled={isImporting} className="bg-red-600 hover:bg-red-700 text-white border-0">
+                  {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />} Import Fabrics
+                </Button>
               </div>
             </div>
           )}
@@ -630,10 +678,10 @@ export default function CollectionFabricsPage({ params }: { params: { id: string
                   <p className="text-xs text-slate-400">Click Analyze to detect fabric properties</p>
                 </div>
                 <div className="flex gap-3">
-                  <Button variant="outline" className="bg-transparent border-slate-700 text-slate-300 hover:bg-slate-800">
-                    <Globe className="mr-2 h-4 w-4" /> Analyze All
+                  <Button variant="outline" onClick={handleAnalyzeAll} disabled={isAnalyzingLocal} className="bg-transparent border-slate-700 text-slate-300 hover:bg-slate-800">
+                    {isAnalyzingLocal ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Globe className="mr-2 h-4 w-4" />} Analyze All
                   </Button>
-                  <Button onClick={handleSaveLocalImports} disabled={isImporting} className="bg-slate-700 hover:bg-slate-600 text-white border-0">
+                  <Button onClick={handleSaveLocalImports} disabled={isImporting || isAnalyzingLocal} className="bg-slate-700 hover:bg-slate-600 text-white border-0">
                     {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <HardDrive className="mr-2 h-4 w-4" />} Save to Collection
                   </Button>
                 </div>
@@ -667,11 +715,11 @@ export default function CollectionFabricsPage({ params }: { params: { id: string
                           <td className="px-2 py-3">
                             <Input value={fabric.code} onChange={e => handleLocalRowChange(idx, 'code', e.target.value)} className="h-8 text-xs bg-transparent border-none focus-visible:ring-1 focus-visible:ring-slate-600 shadow-none px-2" />
                           </td>
-                          <td className="px-4 py-3 text-slate-500 text-xs">-</td>
-                          <td className="px-4 py-3 text-slate-500 text-xs">-</td>
-                          <td className="px-4 py-3 text-slate-500 text-xs">-</td>
-                          <td className="px-4 py-3 text-slate-500 text-xs">-</td>
-                          <td className="px-4 py-3 text-xs text-slate-400">Waiting</td>
+                          <td className="px-4 py-3 text-slate-400 text-xs">{fabric.colorFamily || '-'}</td>
+                          <td className="px-4 py-3 text-slate-400 text-xs">{fabric.quality || '-'}</td>
+                          <td className="px-4 py-3 text-slate-400 text-xs">{fabric.tags ? fabric.tags.join(', ') : '-'}</td>
+                          <td className="px-4 py-3 text-slate-400 text-xs">{fabric.endUse || '-'}</td>
+                          <td className="px-4 py-3 text-xs text-slate-400">{fabric.analyzed ? 'Ready' : 'Waiting'}</td>
                           <td className="px-4 py-3 text-center">
                             <button onClick={() => setLocalData(localData.filter((_, i) => i !== idx))} className="text-slate-500 hover:text-red-400 transition-colors">✕</button>
                           </td>

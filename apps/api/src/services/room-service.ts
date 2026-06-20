@@ -123,7 +123,7 @@ export async function deleteRoom(
   id: string,
 ): Promise<boolean> {
   const result = await db.query(
-    `UPDATE predefined_rooms SET active = false WHERE id = $1`,
+    `DELETE FROM predefined_rooms WHERE id = $1`,
     [id],
   );
   return (result.rowCount ?? 0) > 0;

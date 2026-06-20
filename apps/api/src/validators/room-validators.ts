@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const roomEndUseEnum = z.enum(['sofa', 'curtain', 'both']);
+const roomEndUseEnum = z.enum(['sofa', 'curtain', 'rug', 'wallpaper', 'both']);
 
 export const createRoomSchema = z.object({
   name: z.string().min(1, 'Room name is required'),

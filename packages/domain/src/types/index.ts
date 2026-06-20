@@ -84,7 +84,7 @@ export interface PredefinedRoom {
   name: string;
   imageUrl: string;
   thumbnailUrl?: string;
-  endUse: 'sofa' | 'curtain' | 'both';
+  endUse: 'sofa' | 'curtain' | 'rug' | 'wallpaper' | 'both';
   displayOrder: number;
   active: boolean;
   createdAt: Date;

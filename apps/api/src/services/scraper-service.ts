@@ -73,9 +73,9 @@ export async function scrapeShopaccinoUrl(url: string): Promise<ScrapedFabric[]>
         const src = img.attr('data-src') || img.attr('src');
         if (!src || src.toLowerCase().includes('logo') || src.toLowerCase().includes('icon') || src.toLowerCase().includes('banner')) return;
         
-        const container = img.closest('a, .item, .product, li, .card, div[class*="col-"], div[class*="product"]');
+        const container = img.closest('.teaser-item-div, .product-wrapper, .product-item, .item, .product, li, .card, div[class*="col-"], div[class*="product"]');
         if (container.length > 0) {
-          const textElement = container.find('h2, h3, h4, h5, .title, .name, [class*="title"], [class*="name"]').first();
+          const textElement = container.find('.teaser-name, h2, h3, h4, h5, .title, .name, [class*="title"], [class*="name"]').first();
           let title = textElement.text().trim();
           
           if (!title) {
@@ -96,14 +96,25 @@ export async function scrapeShopaccinoUrl(url: string): Promise<ScrapedFabric[]>
               const parts = title.split('-');
               name = parts[0].trim();
               code = parts.slice(1).join('-').trim() || code;
+            } else {
+               // specific fallback for darpan live style names like "ALFY 725"
+               const parts = title.split(' ');
+               if (parts.length > 1 && !isNaN(Number(parts[parts.length-1]))) {
+                   name = parts.slice(0, parts.length-1).join(' ');
+                   code = parts[parts.length-1];
+               }
             }
+            
+            // extract price if available
+            const priceText = container.find('.price, .actual-price, .product-price, .money').text().replace(/[^0-9.]/g, '');
+            const priceInr = priceText ? parseFloat(priceText) : 0;
 
             if (!fabrics.find(f => f.imageUrl === imageUrl || f.name === name)) {
                 fabrics.push({
                   name,
                   code,
                   imageUrl,
-                  priceInr: 0,
+                  priceInr,
                   endUse: 'sofa',
                   colorFamily: '',
                   quality: 'Standard',

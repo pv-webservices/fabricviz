@@ -116,7 +116,7 @@ export default async function roomRoutes(fastify: FastifyInstance) {
         ipAddress: request.ip,
       });
 
-      return reply.send(success({ message: 'Room deactivated' }));
+      return reply.send(success({ message: 'Room deleted' }));
     },
   );
 }

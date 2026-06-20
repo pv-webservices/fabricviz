@@ -80,7 +80,7 @@ CREATE TABLE predefined_rooms (
   name TEXT NOT NULL,
   image_url TEXT NOT NULL,
   thumbnail_url TEXT,
-  end_use TEXT NOT NULL CHECK (end_use IN ('sofa','curtain','both')),
+  end_use TEXT NOT NULL CHECK (end_use IN ('sofa','curtain','rug','wallpaper','both')),
   display_order INTEGER DEFAULT 0,
   active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW()

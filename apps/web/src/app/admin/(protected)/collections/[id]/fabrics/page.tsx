@@ -29,6 +29,13 @@ export default function CollectionFabricsPage({ params }: { params: { id: string
   const [fabricToDelete, setFabricToDelete] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
   
+  // --- Bulk Edit State ---
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedFabrics, setSelectedFabrics] = useState<string[]>([]);
+  const [isBulkUpdateModalOpen, setIsBulkUpdateModalOpen] = useState(false);
+  const [bulkUpdateField, setBulkUpdateField] = useState('');
+  const [bulkUpdateValue, setBulkUpdateValue] = useState<any>('');
+  
   const defaultFormData = { 
     name: '', code: '', quality: 'Standard', colorFamily: '', endUse: 'sofa',
     tags: '', repeatWidthMm: '', repeatHeightMm: '', fabricWidthCm: '', priceInr: '',
@@ -46,6 +53,7 @@ export default function CollectionFabricsPage({ params }: { params: { id: string
   const [scrapeUrl, setScrapeUrl] = useState('');
   const [isScraping, setIsScraping] = useState(false);
   const [scrapedData, setScrapedData] = useState<any[]>([]);
+  const [editingScrapedIdx, setEditingScrapedIdx] = useState<number | null>(null);
 
   // --- Import Fabrics (Excel) State ---
   const [isImportExcelModalOpen, setIsImportExcelModalOpen] = useState(false);
@@ -56,7 +64,6 @@ export default function CollectionFabricsPage({ params }: { params: { id: string
   const [isImportLocalModalOpen, setIsImportLocalModalOpen] = useState(false);
   const [localData, setLocalData] = useState<any[]>([]);
   const [isUploadingLocal, setIsUploadingLocal] = useState(false);
-  const [isAnalyzingLocal, setIsAnalyzingLocal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const getImageUrl = (url: string) => {
@@ -197,6 +204,62 @@ export default function CollectionFabricsPage({ params }: { params: { id: string
     }
   };
 
+  const handleBulkUpdate = async () => {
+    if (!bulkUpdateField || selectedFabrics.length === 0) return;
+    setIsSaving(true);
+    try {
+      // Loop over selected fabrics and send PUT request (simulate Bulk PATCH if not available)
+      await Promise.all(selectedFabrics.map(async (id) => {
+        const fabric = fabrics.find(f => f.id === id);
+        if (!fabric) return;
+        const payload: any = {};
+        
+        // Map the existing fields for the PUT request (to satisfy the validation if it's strict)
+        // Since we don't have a true bulk PATCH in the current api, we will PUT with the existing data + the change
+        payload.name = fabric.name;
+        payload.code = fabric.code;
+        payload.endUse = fabric.end_use || fabric.endUse || 'sofa';
+        payload.active = fabric.active;
+        payload.collectionId = params.id;
+        
+        // Add existing optional fields to ensure they are not lost
+        if (fabric.quality) payload.quality = fabric.quality;
+        if (fabric.color_family || fabric.colorFamily) payload.colorFamily = fabric.color_family || fabric.colorFamily;
+        if (fabric.tags) payload.tags = fabric.tags;
+        if (fabric.texture_url || fabric.textureUrl) payload.textureUrl = fabric.texture_url || fabric.textureUrl;
+        if (fabric.swatch_url || fabric.swatchUrl) payload.swatchUrl = fabric.swatch_url || fabric.swatchUrl;
+        if (fabric.repeat_width_mm || fabric.repeatWidthMm) payload.repeatWidthMm = Number(fabric.repeat_width_mm || fabric.repeatWidthMm);
+        if (fabric.repeat_height_mm || fabric.repeatHeightMm) payload.repeatHeightMm = Number(fabric.repeat_height_mm || fabric.repeatHeightMm);
+        if (fabric.fabric_width_cm || fabric.fabricWidthCm) payload.fabricWidthCm = Number(fabric.fabric_width_cm || fabric.fabricWidthCm);
+        if (fabric.price_inr || fabric.priceInr) payload.priceInr = Number(fabric.price_inr || fabric.priceInr);
+        if (fabric.feature_flags || fabric.featureFlags) payload.featureFlags = fabric.feature_flags || fabric.featureFlags;
+
+        // Apply the new value to the specified field
+        if (bulkUpdateField === 'tags') {
+          payload.tags = bulkUpdateValue.split(',').map((t: string) => t.trim()).filter(Boolean);
+        } else if (bulkUpdateField === 'priceInr' || bulkUpdateField === 'fabricWidthCm' || bulkUpdateField === 'repeatWidthMm' || bulkUpdateField === 'repeatHeightMm') {
+          payload[bulkUpdateField] = Number(bulkUpdateValue);
+        } else if (bulkUpdateField === 'active') {
+          payload.active = bulkUpdateValue === 'true';
+        } else {
+          payload[bulkUpdateField] = bulkUpdateValue;
+        }
+
+        await fetchApi(`/api/fabrics/${id}`, { method: 'PUT', requireAuth: true, body: JSON.stringify(payload) });
+      }));
+
+      toast({ title: 'Success', description: `Successfully updated ${selectedFabrics.length} fabrics.` });
+      setIsBulkUpdateModalOpen(false);
+      setIsSelectionMode(false);
+      setSelectedFabrics([]);
+      loadData();
+    } catch (err: any) {
+      toast({ title: 'Bulk Update Failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleCopyLink = (fabric: any) => {
     const url = `${window.location.origin}/fabrics/${fabric.id}`;
     navigator.clipboard.writeText(url);
@@ -245,8 +308,26 @@ export default function CollectionFabricsPage({ params }: { params: { id: string
       const res = await fetchApi<any>('/api/scraper/scrape', {
         method: 'POST', requireAuth: true, body: JSON.stringify({ url: scrapeUrl })
       });
-      setScrapedData(res.fabrics || []);
-      toast({ title: 'Success', description: `Found ${res.fabrics?.length || 0} fabrics.` });
+      
+      const colPrefix = (collection?.name || 'COL').substring(0, 3).toUpperCase();
+      const processedFabrics = (res.fabrics || []).map((f: any) => {
+        // Strip everything from the first Rupee symbol or 'Rs' onwards, using word boundaries for 'rs'
+        let cleanName = f.name ? f.name.split(/₹|\b(?:rs\.?|inr)\b/i)[0].trim() : '';
+        // If there's any stray trailing symbols or whitespace, remove them
+        cleanName = cleanName.replace(/[^a-zA-Z0-9]+$/, '').trim();
+        
+        const numericMatch = cleanName.match(/\d+/);
+        const generatedCode = numericMatch ? `${colPrefix}-${numericMatch[0]}` : f.code;
+        
+        return {
+          ...f,
+          name: cleanName,
+          code: generatedCode,
+        };
+      });
+      
+      setScrapedData(processedFabrics);
+      toast({ title: 'Success', description: `Found ${processedFabrics.length || 0} fabrics.` });
     } catch (err: any) {
       toast({ title: 'Scrape Failed', description: err.message, variant: 'destructive' });
     } finally {
@@ -260,27 +341,32 @@ export default function CollectionFabricsPage({ params }: { params: { id: string
     setScrapedData(newData);
   };
 
+
+
   const handleGenerateScrapedExcel = () => {
-    const dataToExport = scrapedData.map(f => ({
-      name: f.name,
-      sku: f.code,
-      image_url: f.imageUrl || '',
-      google_drive_link: '',
-      colour_name: f.colorFamily || '',
-      product_feel: f.quality || '',
-      tags: (f.tags || []).join(', '),
-      use_of_fabric: f.endUse || 'sofa',
-      width_inches: f.fabricWidthCm ? (f.fabricWidthCm / 2.54).toFixed(2) : '',
-      mrp_inr: f.priceInr || '',
-      tax_note: 'Exclusive of all taxes',
-      source_url: scrapeUrl,
-      is_active: f.active !== false ? 'TRUE' : 'FALSE'
-    }));
+    const dataToExport = scrapedData.map(f => {
+      return {
+        name: f.name,
+        sku: f.code,
+        image_url: f.imageUrl || '',
+        google_drive_link: '',
+        colour_name: f.colorFamily || '',
+        product_feel: f.quality || '',
+        tags: (f.tags || []).join(', '),
+        use_of_fabric: f.endUse || 'sofa',
+        width_inches: f.fabricWidthCm ? (f.fabricWidthCm / 2.54).toFixed(2) : '',
+        mrp_inr: f.priceInr || '',
+        tax_note: 'Exclusive of all taxes',
+        source_url: scrapeUrl,
+        is_active: f.active !== false ? 'TRUE' : 'FALSE'
+      };
+    });
 
     const ws = XLSX.utils.json_to_sheet(dataToExport);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Scraped");
-    XLSX.writeFile(wb, "Scraped_Fabrics.xlsx");
+    const exportName = collection?.name ? `${collection.name}_fabrics.xlsx` : "Scraped_Fabrics.xlsx";
+    XLSX.writeFile(wb, exportName);
     toast({ title: 'Success', description: 'Scraped Excel generated.' });
   };
 
@@ -381,21 +467,6 @@ export default function CollectionFabricsPage({ params }: { params: { id: string
     if (fileInputRef.current) fileInputRef.current.value = ''; // Reset input
   };
 
-  const handleAnalyzeAll = async () => {
-    setIsAnalyzingLocal(true);
-    // Mocking an AI analysis delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setLocalData(prev => prev.map(item => ({
-      ...item,
-      colorFamily: item.colorFamily || 'Neutral',
-      quality: item.quality || 'Premium',
-      endUse: item.endUse || 'Upholstery',
-      tags: ['New Arrival'],
-      analyzed: true
-    })));
-    setIsAnalyzingLocal(false);
-    toast({ title: 'Analysis Complete', description: `Successfully analyzed ${localData.length} images.` });
-  };
 
   const handleLocalRowChange = (index: number, field: string, value: any) => {
     const newData = [...localData];
@@ -434,44 +505,87 @@ export default function CollectionFabricsPage({ params }: { params: { id: string
         </Link>
       </div>
 
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">{collection?.name || 'Collection'}</h1>
-          <p className="text-muted-foreground mt-1">Manage fabrics in this collection</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <Button variant="outline" className="bg-slate-900 text-white hover:bg-slate-800" onClick={handleExportExcel}>
-            <Download className="mr-2 h-4 w-4" /> Export to Excel
-          </Button>
-          <Button variant="outline" className="bg-slate-900 text-white hover:bg-slate-800" onClick={() => { setScrapedData([]); setScrapeUrl(''); setIsScrapeModalOpen(true); }}>
-            <Globe className="mr-2 h-4 w-4" /> Scrape from Website
-          </Button>
-          <Button variant="outline" className="bg-slate-900 text-white hover:bg-slate-800" onClick={() => setIsImportLocalModalOpen(true)}>
-            <HardDrive className="mr-2 h-4 w-4" /> Import from Local
-          </Button>
-          <Button variant="outline" className="bg-slate-900 text-white hover:bg-slate-800" onClick={() => setIsImportExcelModalOpen(true)}>
-            <Upload className="mr-2 h-4 w-4" /> Import Fabrics
-          </Button>
-          <Button className="bg-red-600 hover:bg-red-700 text-white border-0" onClick={() => openModal()}>
-            <Plus className="mr-2 h-4 w-4" /> Add Fabric
-          </Button>
-        </div>
-      </div>
+      {!isSelectionMode ? (
+        <>
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">{collection?.name || 'Collection'}</h1>
+              <p className="text-muted-foreground mt-1">Manage fabrics in this collection</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button variant="outline" className="bg-slate-900 text-white hover:bg-slate-800" onClick={handleExportExcel}>
+                <Download className="mr-2 h-4 w-4" /> Export to Excel
+              </Button>
+              <Button variant="outline" className="bg-slate-900 text-white hover:bg-slate-800" onClick={() => { setScrapedData([]); setScrapeUrl(''); setIsScrapeModalOpen(true); }}>
+                <Globe className="mr-2 h-4 w-4" /> Scrape from Website
+              </Button>
+              <Button variant="outline" className="bg-slate-900 text-white hover:bg-slate-800" onClick={() => setIsImportLocalModalOpen(true)}>
+                <HardDrive className="mr-2 h-4 w-4" /> Import from Local
+              </Button>
+              <Button variant="outline" className="bg-slate-900 text-white hover:bg-slate-800" onClick={() => setIsImportExcelModalOpen(true)}>
+                <Upload className="mr-2 h-4 w-4" /> Import Fabrics
+              </Button>
+              <Button className="bg-red-600 hover:bg-red-700 text-white border-0" onClick={() => openModal()}>
+                <Plus className="mr-2 h-4 w-4" /> Add Fabric
+              </Button>
+            </div>
+          </div>
 
-      <div className="flex items-center justify-between rounded-lg border border-slate-800 bg-[#1a1a1a] px-4 py-3 text-slate-300">
-        <div className="text-sm">{fabrics.length} fabrics in this collection</div>
-        <Button variant="outline" size="sm" className="bg-transparent border-slate-600 text-slate-300 hover:bg-slate-800">
-          <CheckSquare className="mr-2 h-4 w-4" /> Select Fabrics
-        </Button>
-      </div>
+          <div className="flex items-center justify-between rounded-lg border border-slate-800 bg-[#1a1a1a] px-4 py-3 text-slate-300">
+            <div className="text-sm">{fabrics.length} fabrics in this collection</div>
+            <Button variant="outline" size="sm" onClick={() => setIsSelectionMode(true)} className="bg-transparent border-slate-600 text-slate-300 hover:bg-slate-800">
+              <CheckSquare className="mr-2 h-4 w-4" /> Select Fabrics
+            </Button>
+          </div>
+        </>
+      ) : (
+        <div className="flex items-center justify-between rounded-lg border border-slate-800 bg-[#1e1e1e] px-4 py-3 text-slate-300">
+          <div className="flex items-center gap-6">
+            <div className="bg-yellow-400 text-black px-3 py-1 rounded-full text-xs font-bold">
+              {selectedFabrics.length} selected
+            </div>
+            <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-white">
+              <input type="checkbox" className="form-checkbox h-4 w-4 text-red-600 rounded bg-transparent border-slate-600" 
+                checked={selectedFabrics.length === fabrics.length && fabrics.length > 0}
+                onChange={(e) => setSelectedFabrics(e.target.checked ? fabrics.map(f => f.id) : [])}
+              />
+              Select All
+            </label>
+            <button className="text-sm hover:text-white" onClick={() => setSelectedFabrics([])}>
+              Deselect All
+            </button>
+          </div>
+          <div className="flex gap-2">
+            <Button className="bg-red-600 hover:bg-red-700 text-white border-0" disabled={selectedFabrics.length === 0} onClick={() => setIsBulkUpdateModalOpen(true)}>
+              <Edit className="mr-2 h-4 w-4" /> Bulk Update
+            </Button>
+            <Button variant="outline" className="border-slate-700 text-white hover:bg-slate-800" onClick={() => { setIsSelectionMode(false); setSelectedFabrics([]); }}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
 
       {fabrics.length === 0 ? (
         <div className="rounded-lg border bg-white p-12 text-center text-slate-500">No fabrics found in this collection.</div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {fabrics.map((fabric) => (
-            <div key={fabric.id} className="group flex flex-col rounded-xl border border-slate-800 bg-[#1e1e1e] shadow-sm overflow-hidden text-slate-200">
+            <div key={fabric.id} 
+              className={`group flex flex-col rounded-xl border ${selectedFabrics.includes(fabric.id) ? 'border-red-600 shadow-[0_0_0_1px_rgba(220,38,38,1)]' : 'border-slate-800'} bg-[#1e1e1e] shadow-sm overflow-hidden text-slate-200 cursor-pointer`}
+              onClick={() => {
+                if (!isSelectionMode) return;
+                setSelectedFabrics(prev => prev.includes(fabric.id) ? prev.filter(id => id !== fabric.id) : [...prev, fabric.id]);
+              }}
+            >
               <div className="aspect-square bg-slate-200 relative overflow-hidden flex items-center justify-center">
+                {isSelectionMode && (
+                  <div className="absolute top-2 left-2 z-10">
+                    <input type="checkbox" className="h-5 w-5 text-red-600 rounded border-slate-600 bg-black/50" 
+                      checked={selectedFabrics.includes(fabric.id)} readOnly 
+                    />
+                  </div>
+                )}
                 {fabric.texture_url || fabric.swatch_url || fabric.textureUrl ? (
                   <img src={getImageUrl(fabric.texture_url || fabric.swatch_url || fabric.textureUrl)} alt={fabric.name} className="object-cover w-full h-full" />
                 ) : (
@@ -502,14 +616,6 @@ export default function CollectionFabricsPage({ params }: { params: { id: string
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" className="flex-1 bg-transparent border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white justify-start" onClick={() => handleProcessImage(fabric)}>
-                      <ImageIcon className="mr-2 h-4 w-4" /> Process Image
-                    </Button>
-                    <Button variant="outline" size="icon" className="bg-transparent border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </div>
                   <Button className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-semibold border-0" onClick={() => handleCopyLink(fabric)}>
                     <LinkIcon className="mr-2 h-4 w-4" /> Copy Wix Link
                   </Button>
@@ -519,6 +625,73 @@ export default function CollectionFabricsPage({ params }: { params: { id: string
           ))}
         </div>
       )}
+
+      {/* Bulk Update Modal */}
+      <Modal isOpen={isBulkUpdateModalOpen} onClose={() => setIsBulkUpdateModalOpen(false)} title="Bulk Update Fabrics">
+        <div className="space-y-4 pt-2">
+          <p className="text-sm text-slate-400">Update a field for {selectedFabrics.length} selected fabrics.</p>
+          
+          <div className="space-y-2">
+            <Label>Select Field to Update</Label>
+            <select
+              className="flex h-10 w-full rounded-md border border-slate-700 bg-[#1e1e1e] px-3 py-2 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600"
+              value={bulkUpdateField}
+              onChange={(e) => { setBulkUpdateField(e.target.value); setBulkUpdateValue(''); }}
+            >
+              <option value="">Choose a field...</option>
+              <option value="colorFamily">Color Family</option>
+              <option value="quality">Quality</option>
+              <option value="tags">Tags</option>
+              <option value="endUse">End Use</option>
+              <option value="active">Active Status</option>
+              <option value="repeatWidthMm">Repeat Width (mm)</option>
+              <option value="repeatHeightMm">Repeat Height (mm)</option>
+              <option value="fabricWidthCm">Fabric Width (inch)</option>
+              <option value="priceInr">Price (₹ INR)</option>
+            </select>
+          </div>
+
+          {bulkUpdateField && (
+            <div className="space-y-2">
+              <Label>New Value</Label>
+              {bulkUpdateField === 'endUse' ? (
+                <select className="flex h-10 w-full rounded-md border border-slate-700 bg-[#1e1e1e] px-3 py-2 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600"
+                  value={bulkUpdateValue} onChange={e => setBulkUpdateValue(e.target.value)}>
+                  <option value="">Select End Use</option>
+                  <option value="sofa">Sofa</option>
+                  <option value="curtain">Curtain</option>
+                  <option value="rug">Rug</option>
+                  <option value="wallpaper">Wallpaper</option>
+                  <option value="both">Both</option>
+                </select>
+              ) : bulkUpdateField === 'active' ? (
+                <select className="flex h-10 w-full rounded-md border border-slate-700 bg-[#1e1e1e] px-3 py-2 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600"
+                  value={bulkUpdateValue} onChange={e => setBulkUpdateValue(e.target.value)}>
+                  <option value="">Select Status</option>
+                  <option value="true">Active</option>
+                  <option value="false">Inactive</option>
+                </select>
+              ) : bulkUpdateField === 'colorFamily' ? (
+                <Input value={bulkUpdateValue} onChange={e => setBulkUpdateValue(e.target.value)} placeholder="e.g. Beige" />
+              ) : (
+                <Input 
+                  type={['priceInr', 'fabricWidthCm', 'repeatWidthMm', 'repeatHeightMm'].includes(bulkUpdateField) ? 'number' : 'text'}
+                  value={bulkUpdateValue} 
+                  onChange={e => setBulkUpdateValue(e.target.value)} 
+                  placeholder="Enter new value" 
+                />
+              )}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button variant="outline" className="border-slate-700 text-white hover:bg-slate-800" onClick={() => setIsBulkUpdateModalOpen(false)}>Cancel</Button>
+            <Button className="bg-red-600 hover:bg-red-700 text-white border-0" onClick={handleBulkUpdate} disabled={!bulkUpdateField || bulkUpdateValue === '' || isSaving}>
+              {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null} Save Changes
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Scrape Modal */}
       <Modal isOpen={isScrapeModalOpen} onClose={() => setIsScrapeModalOpen(false)} title="Scrape Fabrics from Website">
@@ -540,10 +713,8 @@ export default function CollectionFabricsPage({ params }: { params: { id: string
               <div className="flex items-center justify-between">
                 <div>
                   <h4 className="font-bold text-white">Found {scrapedData.length} fabrics</h4>
-                  <p className="text-xs text-slate-400">Click Analyze to fill in missing properties</p>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" disabled className="bg-slate-900 border-slate-700 text-white">Analyze All</Button>
                   <Button onClick={handleGenerateScrapedExcel} className="bg-white text-black hover:bg-slate-200"><Download className="mr-2 h-4 w-4"/> Generate Excel</Button>
                 </div>
               </div>
@@ -557,22 +728,52 @@ export default function CollectionFabricsPage({ params }: { params: { id: string
                       <th className="px-4 py-3">Name</th>
                       <th className="px-4 py-3">Code</th>
                       <th className="px-4 py-3">Colour</th>
-                      <th className="px-4 py-3">Price ₹</th>
+                      <th className="px-4 py-3">Feel</th>
+                      <th className="px-4 py-3 whitespace-nowrap">Width (in)</th>
+                      <th className="px-4 py-3 whitespace-nowrap">Price ₹</th>
+                      <th className="px-4 py-3">End Use</th>
+                      <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3">Edit</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {scrapedData.map((row, idx) => (
+                    {scrapedData.map((row, idx) => {
+                      const isEditing = editingScrapedIdx === idx;
+                      return (
                       <tr key={idx} className="border-b border-slate-800 bg-[#1e1e1e]">
                         <td className="px-4 py-3">{idx + 1}</td>
                         <td className="px-4 py-3">
                           {row.imageUrl ? <img src={row.imageUrl} className="w-10 h-10 object-cover rounded" /> : '-'}
                         </td>
-                        <td className="px-4 py-3"><Input value={row.name} onChange={e => handleScrapedRowChange(idx, 'name', e.target.value)} className="h-8 min-w-[120px] bg-transparent border-slate-700" /></td>
-                        <td className="px-4 py-3"><Input value={row.code} onChange={e => handleScrapedRowChange(idx, 'code', e.target.value)} className="h-8 min-w-[100px] bg-transparent border-slate-700" /></td>
-                        <td className="px-4 py-3"><Input value={row.colorFamily} onChange={e => handleScrapedRowChange(idx, 'colorFamily', e.target.value)} className="h-8 min-w-[80px] bg-transparent border-slate-700" /></td>
-                        <td className="px-4 py-3"><Input type="number" value={row.priceInr} onChange={e => handleScrapedRowChange(idx, 'priceInr', Number(e.target.value))} className="h-8 min-w-[80px] bg-transparent border-slate-700" /></td>
+                        <td className="px-4 py-3 min-w-[120px]">
+                          {isEditing ? <Input value={row.name} onChange={e => handleScrapedRowChange(idx, 'name', e.target.value)} className="h-8 bg-transparent border-slate-700" /> : (row.name || '-')}
+                        </td>
+                        <td className="px-4 py-3 min-w-[100px]">
+                          {isEditing ? <Input value={row.code} onChange={e => handleScrapedRowChange(idx, 'code', e.target.value)} className="h-8 bg-transparent border-slate-700" /> : (row.code || '-')}
+                        </td>
+                        <td className="px-4 py-3 min-w-[80px]">
+                          {isEditing ? <Input value={row.colorFamily} onChange={e => handleScrapedRowChange(idx, 'colorFamily', e.target.value)} className="h-8 bg-transparent border-slate-700" /> : (row.colorFamily || '-')}
+                        </td>
+                        <td className="px-4 py-3 min-w-[80px]">
+                          {isEditing ? <Input value={row.quality} onChange={e => handleScrapedRowChange(idx, 'quality', e.target.value)} className="h-8 bg-transparent border-slate-700" /> : (row.quality || '-')}
+                        </td>
+                        <td className="px-4 py-3 min-w-[80px]">
+                          {isEditing ? <Input type="number" value={row.fabricWidthCm ? (row.fabricWidthCm / 2.54).toFixed(2) : ''} onChange={e => handleScrapedRowChange(idx, 'fabricWidthCm', Math.round(Number(e.target.value) * 2.54))} className="h-8 bg-transparent border-slate-700" /> : (row.fabricWidthCm ? (row.fabricWidthCm / 2.54).toFixed(2) : '-')}
+                        </td>
+                        <td className="px-4 py-3 min-w-[80px]">
+                          {isEditing ? <Input type="number" value={row.priceInr} onChange={e => handleScrapedRowChange(idx, 'priceInr', Number(e.target.value))} className="h-8 bg-transparent border-slate-700" /> : (row.priceInr || '-')}
+                        </td>
+                        <td className="px-4 py-3 min-w-[80px]">
+                          {isEditing ? <Input value={row.endUse} onChange={e => handleScrapedRowChange(idx, 'endUse', e.target.value)} className="h-8 bg-transparent border-slate-700" /> : (row.endUse || '-')}
+                        </td>
+                        <td className="px-4 py-3 text-slate-400 text-xs">Waiting</td>
+                        <td className="px-4 py-3">
+                          <Button variant="ghost" size="icon" onClick={() => setEditingScrapedIdx(isEditing ? null : idx)} className="h-8 w-8 hover:bg-slate-700 text-slate-400 hover:text-white">
+                            {isEditing ? <CheckSquare className="h-4 w-4 text-green-500" /> : <Edit className="h-4 w-4" />}
+                          </Button>
+                        </td>
                       </tr>
-                    ))}
+                    )})}
                   </tbody>
                 </table>
               </div>
@@ -675,13 +876,9 @@ export default function CollectionFabricsPage({ params }: { params: { id: string
               <div className="flex items-center justify-between">
                 <div>
                   <h4 className="font-bold text-white">{localData.length} images ready</h4>
-                  <p className="text-xs text-slate-400">Click Analyze to detect fabric properties</p>
                 </div>
                 <div className="flex gap-3">
-                  <Button variant="outline" onClick={handleAnalyzeAll} disabled={isAnalyzingLocal} className="bg-transparent border-slate-700 text-slate-300 hover:bg-slate-800">
-                    {isAnalyzingLocal ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Globe className="mr-2 h-4 w-4" />} Analyze All
-                  </Button>
-                  <Button onClick={handleSaveLocalImports} disabled={isImporting || isAnalyzingLocal} className="bg-slate-700 hover:bg-slate-600 text-white border-0">
+                  <Button onClick={handleSaveLocalImports} disabled={isImporting} className="bg-slate-700 hover:bg-slate-600 text-white border-0">
                     {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <HardDrive className="mr-2 h-4 w-4" />} Save to Collection
                   </Button>
                 </div>

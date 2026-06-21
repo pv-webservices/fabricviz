@@ -31,12 +31,12 @@ export async function scrapeShopaccinoUrl(url: string): Promise<ScrapedFabric[]>
     const productCards = $('.product-wrapper, .product-item, .item.product, .product-block, .grid-product');
 
     productCards.each((_, el) => {
-      const titleText = $(el).find('.product-title, .product-name, .title a, .name').text().trim();
-      let name = titleText;
+      const sanitizedTitleText = $(el).find('.product-title, .product-name, .title a, .name').text().replace(/[\n\r\t]+/g, ' ').trim();
+      let name = sanitizedTitleText;
       let code = '';
       
-      if (titleText.includes('-')) {
-        const parts = titleText.split('-');
+      if (sanitizedTitleText.includes('-')) {
+        const parts = sanitizedTitleText.split('-');
         name = parts[0].trim();
         code = parts.slice(1).join('-').trim();
       } else {

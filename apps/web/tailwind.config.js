@@ -16,7 +16,21 @@ module.exports = {
       },
     },
     extend: {
+      fontFamily: {
+        serif: ['Cormorant Garamond', 'ui-serif', 'Georgia', 'Cambria', '"Times New Roman"', 'Times', 'serif'],
+        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+      },
       colors: {
+        brand: {
+          bg: '#FDFAF6',
+          dark: '#1E1A14',
+          accent: '#C9A060',
+          terracotta: '#C75B3A',
+          alt: '#F2EDE4',
+          text: '#1C1C1C',
+          muted: '#6B6355',
+          forest: '#1A2E1E',
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

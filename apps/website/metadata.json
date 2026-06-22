@@ -1,0 +1,6 @@
+{
+  "name": "LuxeFabrics Wholesale",
+  "description": "Premium curtain & sofa fabrics for designers, architects & retailers.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

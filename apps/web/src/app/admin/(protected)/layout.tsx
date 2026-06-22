@@ -4,7 +4,7 @@ import { Toaster } from '@/components/ui/toaster';
 
 export default function AdminProtectedLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-screen w-full bg-slate-50 overflow-hidden">
+    <div className="flex h-screen w-full bg-brand-bg overflow-hidden">
       <div className="hidden md:flex md:flex-col">
         <AdminSidebar />
       </div>

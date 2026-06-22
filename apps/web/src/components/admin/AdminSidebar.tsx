@@ -32,9 +32,9 @@ export function AdminSidebar() {
   const pathname = usePathname();
 
   return (
-    <div className="flex h-full w-64 flex-col bg-slate-900 border-r border-slate-800">
+    <div className="flex h-full w-64 flex-col bg-brand-dark border-r border-black/10">
       <div className="flex h-16 shrink-0 items-center px-6">
-        <span className="text-xl font-bold text-white tracking-tight">FabricViz <span className="text-blue-500">Admin</span></span>
+        <span className="text-xl font-bold text-white tracking-tight font-serif uppercase tracking-widest">FabricViz <span className="text-brand-accent">Admin</span></span>
       </div>
       <div className="flex flex-1 flex-col overflow-y-auto">
         <nav className="flex-1 space-y-1 px-4 py-4">
@@ -46,14 +46,14 @@ export function AdminSidebar() {
                 href={item.href}
                 className={cn(
                   isActive
-                    ? 'bg-slate-800 text-white'
-                    : 'text-slate-300 hover:bg-slate-800 hover:text-white',
+                    ? 'bg-white/10 text-brand-accent'
+                    : 'text-white/70 hover:bg-white/10 hover:text-white',
                   'group flex items-center rounded-md px-2 py-2 text-sm font-medium transition-colors'
                 )}
               >
                 <item.icon
                   className={cn(
-                    isActive ? 'text-blue-500' : 'text-slate-400 group-hover:text-blue-500',
+                    isActive ? 'text-brand-accent' : 'text-white/50 group-hover:text-brand-accent',
                     'mr-3 h-5 w-5 shrink-0 transition-colors'
                   )}
                   aria-hidden="true"

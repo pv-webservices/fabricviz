@@ -259,3 +259,9 @@ When starting a new session in Antigravity IDE or Claude Code, run these tasks f
 - [ ] Works at 375px mobile and 1280px desktop
 - [ ] Passes ESLint with zero warnings
 
+---
+
+## 15. Design System
+
+The official Design System is defined in `docs/DESIGN-SYSTEM.md`. All UI components must adhere strictly to these color and typography tokens.
+**No hardcoded hex colors are allowed in JSX.** Always use the established Tailwind utility classes (e.g., `bg-brand-bg`, `text-brand-terracotta`, `font-serif`).

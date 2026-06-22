@@ -47,11 +47,11 @@ export default function AdminLoginPage() {
   }, [handleLogin]);
 
   return (
-    <div className="flex h-screen w-full items-center justify-center bg-slate-50 px-4">
+    <div className="flex h-screen w-full items-center justify-center bg-brand-bg px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl font-bold tracking-tight">FabricViz Admin</CardTitle>
-          <CardDescription>Enter your email and password to access the dashboard</CardDescription>
+          <CardTitle className="font-serif text-3xl font-bold tracking-tight text-brand-text">FabricViz Admin</CardTitle>
+          <CardDescription className="font-sans text-brand-muted">Enter your email and password to access the dashboard</CardDescription>
         </CardHeader>
         <CardContent>
           <form action="javascript:void(0)" onSubmit={onSubmit} className="space-y-4">

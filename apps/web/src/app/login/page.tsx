@@ -47,11 +47,11 @@ export default function CustomerLoginPage() {
   }, [handleLogin]);
 
   return (
-    <div className="flex min-h-[100dvh] w-full items-center justify-center bg-slate-50 px-4 py-12">
+    <div className="flex min-h-[100dvh] w-full items-center justify-center bg-brand-bg px-4 py-12">
       <Card className="w-full max-w-sm border-0 shadow-lg sm:border sm:shadow-sm">
         <CardHeader className="space-y-2 text-center pb-8 pt-6">
-          <CardTitle className="text-3xl font-bold tracking-tight text-slate-900">FabricViz</CardTitle>
-          <CardDescription className="text-base">Enter your 5-digit access code</CardDescription>
+          <CardTitle className="font-serif text-4xl font-bold tracking-tight text-brand-text">FabricViz</CardTitle>
+          <CardDescription className="text-base font-sans text-brand-muted">Enter your 5-digit access code</CardDescription>
         </CardHeader>
         <CardContent>
           <form action="javascript:void(0)" onSubmit={onSubmit} className="space-y-6">

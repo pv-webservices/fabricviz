@@ -8,6 +8,7 @@ import fs from 'fs';
 import { runSprint5Migrations } from './migrations/sprint5-migration';
 import { runSprint7Migrations } from './migrations/sprint7-migration';
 import { runSprint9Migrations } from './migrations/sprint9-migration';
+import { runCmsMigrations } from './migrations/cms-migration';
 
 const db = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgresql://fabricviz:password@localhost:5432/fabricviz',
@@ -35,6 +36,7 @@ async function main() {
     await runSprint5Migrations(db);
     await runSprint7Migrations(db);
     await runSprint9Migrations(db);
+    await runCmsMigrations(db);
     console.log('All migrations done');
     process.exit(0);
   } catch (err) {

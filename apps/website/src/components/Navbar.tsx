@@ -2,7 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { Menu, X, Heart, User, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
-const MENU_ITEMS = [
+interface MenuItem {
+  name: string;
+  href: string;
+}
+
+interface HeaderData {
+  logo_text: string;
+  menu_items: MenuItem[];
+}
+
+const MENU_ITEMS_FALLBACK: MenuItem[] = [
   { name: 'HOME', href: '/' },
   { name: 'SOFA', href: '/sofa' },
   { name: 'CURTAIN', href: '/curtain' },
@@ -12,6 +22,10 @@ const MENU_ITEMS = [
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [headerData, setHeaderData] = useState<HeaderData>({
+    logo_text: 'FABRICVIZ',
+    menu_items: MENU_ITEMS_FALLBACK
+  });
 
   useEffect(() => {
     const handleScroll = () => {
@@ -19,6 +33,25 @@ export default function Navbar() {
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const fetchHeaderData = async () => {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/homepage/header`);
+        if (!res.ok) throw new Error('Failed to fetch header data');
+        const data = await res.json();
+        if (data) {
+          setHeaderData({
+            logo_text: data.logo_text || 'FABRICVIZ',
+            menu_items: data.menu_items && data.menu_items.length > 0 ? data.menu_items : MENU_ITEMS_FALLBACK
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching header data:', error);
+      }
+    };
+    fetchHeaderData();
   }, []);
 
   const isDarkText = isScrolled || mobileMenuOpen;
@@ -46,12 +79,12 @@ export default function Navbar() {
           <div className={`font-serif text-xl sm:text-2xl lg:text-3xl font-semibold tracking-tighter transition-colors ${
             !isDarkText ? 'text-white' : 'text-brand-text'
           }`}>
-            <a href="/">FABRICVIZ</a>
+            <a href="/">{headerData.logo_text}</a>
           </div>
 
           {/* Desktop Navigation */}
           <ul className="hidden lg:flex items-center gap-6 text-[11px] font-semibold tracking-widest uppercase">
-            {MENU_ITEMS.map((menu) => (
+            {headerData.menu_items.map((menu) => (
               <li key={menu.name} className="py-2">
                 <a 
                   href={menu.href} 
@@ -89,7 +122,7 @@ export default function Navbar() {
             className="fixed inset-0 z-40 bg-white pt-20 px-6 overflow-y-auto block lg:hidden"
           >
             <ul className="flex flex-col gap-6 text-lg py-6">
-              {MENU_ITEMS.map(menu => (
+              {headerData.menu_items.map(menu => (
                 <li key={menu.name} className="border-b border-black/5 pb-4">
                   <a href={menu.href} className="font-semibold text-brand-text tracking-wider hover:text-brand-accent block w-full">{menu.name}</a>
                 </li>

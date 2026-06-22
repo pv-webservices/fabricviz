@@ -12,12 +12,14 @@ import {
   CreditCard, 
   BarChart3, 
   HardDrive, 
-  Settings
+  Settings,
+  Globe
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navigation = [
   { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
+  { name: 'Homepage', href: '/admin/homepage', icon: Globe },
   { name: 'Collections', href: '/admin/collections', icon: Layers },
   { name: 'Rooms', href: '/admin/rooms', icon: ImageIcon },
   { name: 'Customers', href: '/admin/customers', icon: Users },

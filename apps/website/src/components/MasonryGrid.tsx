@@ -1,7 +1,29 @@
 import React, { useRef } from 'react';
 import { motion, useInView } from 'motion/react';
 
-const MASONRY_ITEMS = [
+interface MasonryItem {
+  type: string;
+  src?: string;
+  alt?: string;
+  span?: string;
+  span_preset?: string;
+  title?: string;
+  subtitle?: string;
+  textColor?: string;
+  active?: boolean;
+  order?: number;
+}
+
+const SPAN_MAP: Record<string, string> = {
+  'horizontal': 'col-span-1 sm:col-span-2 md:col-span-2 lg:col-span-2 row-span-1',
+  'vertical': 'col-span-1 row-span-1 md:row-span-2 lg:row-span-2',
+  'square': 'col-span-1 row-span-1',
+  'text_dark': 'col-span-1 sm:col-span-2 md:col-span-1 lg:col-span-1 row-span-1 bg-[#a39a95] text-white',
+  'text_light': 'col-span-1 sm:col-span-2 md:col-span-1 lg:col-span-1 row-span-1 bg-brand-alt text-brand-text',
+  'vertical_alt': 'col-span-1 sm:col-span-2 md:col-span-1 lg:col-span-1 row-span-1 md:row-span-2 lg:row-span-2'
+};
+
+const MASONRY_ITEMS_FALLBACK: MasonryItem[] = [
   { type: 'image', src: 'https://images.unsplash.com/photo-1595163901618-9c5957bcf875?q=80&w=800&auto=format&fit=crop', alt: 'Outdoor shade sail', span: 'col-span-1 sm:col-span-2 md:col-span-2 lg:col-span-2 row-span-1' },
   { type: 'image', src: 'https://images.unsplash.com/photo-1541123437800-1c0c05a10408?q=80&w=800&auto=format&fit=crop', alt: 'Bedroom sheer drapes', span: 'col-span-1 row-span-1 md:row-span-2 lg:row-span-2' },
   { type: 'image', src: 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?q=80&w=800&auto=format&fit=crop', alt: 'Roller blind', span: 'col-span-1 row-span-1 md:row-span-2 lg:row-span-2' },
@@ -16,6 +38,29 @@ const MASONRY_ITEMS = [
 export default function MasonryGrid() {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-10%" });
+  const [items, setItems] = React.useState<MasonryItem[]>(MASONRY_ITEMS_FALLBACK);
+
+  React.useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/homepage/masonry_grid`);
+        if (!res.ok) throw new Error('Failed to fetch masonry_grid');
+        const data = await res.json();
+        
+        let fetchedItems: MasonryItem[] = Array.isArray(data) ? data : (data.masonry_grid || []);
+        fetchedItems = fetchedItems
+          .filter((item: MasonryItem) => item.active === true)
+          .sort((a: MasonryItem, b: MasonryItem) => (a.order || 0) - (b.order || 0));
+        
+        if (fetchedItems.length > 0) {
+          setItems(fetchedItems);
+        }
+      } catch (err) {
+        console.error('Error fetching masonry data:', err);
+      }
+    };
+    fetchData();
+  }, []);
 
   return (
     <section className="py-16 md:py-24 max-w-[1440px] mx-auto px-4 md:px-8">
@@ -28,13 +73,15 @@ export default function MasonryGrid() {
       </div>
 
       <div ref={ref} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6 auto-rows-[200px] md:auto-rows-[250px] lg:auto-rows-[300px]">
-        {MASONRY_ITEMS.map((item, index) => (
+        {items.map((item, index) => {
+          const spanClass = item.span_preset && SPAN_MAP[item.span_preset] ? SPAN_MAP[item.span_preset] : (item.span || 'col-span-1 row-span-1');
+          return (
           <motion.div
             key={index}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.6, delay: index * 0.08, ease: "easeOut" }}
-            className={`relative rounded-lg overflow-hidden group ${item.span}`}
+            className={`relative rounded-lg overflow-hidden group ${spanClass}`}
           >
             {item.type === 'image' ? (
               <>
@@ -54,15 +101,15 @@ export default function MasonryGrid() {
                 </div>
               </>
             ) : (
-              <div className={`w-full h-full p-6 md:p-8 flex flex-col justify-center text-left ${item.span.includes('bg-[#a39a95]') ? 'bg-[#a39a95] text-white' : 'bg-brand-alt border border-black/5'}`}>
-                <h3 className={`font-serif text-lg md:text-xl leading-snug mb-4 ${item.span.includes('bg-[#a39a95]') ? 'text-white' : 'text-brand-text'}`}>
+              <div className={`w-full h-full p-6 md:p-8 flex flex-col justify-center text-left ${spanClass.includes('bg-[#a39a95]') ? 'bg-[#a39a95] text-white' : 'bg-brand-alt border border-black/5'}`}>
+                <h3 className={`font-serif text-lg md:text-xl leading-snug mb-4 ${spanClass.includes('bg-[#a39a95]') ? 'text-white' : 'text-brand-text'}`}>
                   {item.title} <br className="hidden md:block"/> <span className="font-light">{item.subtitle}</span>
                 </h3>
-                <div className={`w-8 h-[1px] ${item.span.includes('bg-[#a39a95]') ? 'bg-white/40' : 'bg-brand-accent'}`}></div>
+                <div className={`w-8 h-[1px] ${spanClass.includes('bg-[#a39a95]') ? 'bg-white/40' : 'bg-brand-accent'}`}></div>
               </div>
             )}
           </motion.div>
-        ))}
+        )})}
       </div>
     </section>
   );

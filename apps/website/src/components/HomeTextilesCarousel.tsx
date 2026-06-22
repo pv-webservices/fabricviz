@@ -1,8 +1,16 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { motion, useInView } from 'motion/react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-const CARDS = [
+interface TextileCard {
+  image: string;
+  name: string;
+  code: string;
+  active?: boolean;
+  order?: number;
+}
+
+const CARDS_FALLBACK: TextileCard[] = [
   { image: 'https://images.unsplash.com/photo-1595163901618-9c5957bcf875?q=80&w=800&auto=format&fit=crop', name: 'Outdoor Performance', code: 'All-Weather Durability' },
   { image: 'https://images.unsplash.com/photo-1567016376408-0226e4d0c1ea?q=80&w=800&auto=format&fit=crop', name: 'Plush Velvet Upholstery', code: 'Indoor Luxury Textures' },
   { image: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?q=80&w=800&auto=format&fit=crop', name: 'Linen Curtains & Drapery', code: 'Light Filtering & Sheers' },
@@ -14,6 +22,29 @@ export default function HomeTextilesCarousel() {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-10%" });
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [cards, setCards] = useState<TextileCard[]>(CARDS_FALLBACK);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/homepage/textiles_carousel`);
+        if (!res.ok) throw new Error('Failed to fetch textiles_carousel');
+        const data = await res.json();
+        
+        let fetchedCards: TextileCard[] = Array.isArray(data) ? data : (data.textiles_carousel || []);
+        fetchedCards = fetchedCards
+          .filter((card: TextileCard) => card.active === true)
+          .sort((a: TextileCard, b: TextileCard) => (a.order || 0) - (b.order || 0));
+        
+        if (fetchedCards.length > 0) {
+          setCards(fetchedCards);
+        }
+      } catch (err) {
+        console.error('Error fetching textiles data:', err);
+      }
+    };
+    fetchData();
+  }, []);
 
   const scrollLeft = () => {
     if (scrollRef.current) {
@@ -60,7 +91,7 @@ export default function HomeTextilesCarousel() {
           ref={scrollRef}
           className="flex gap-4 md:gap-6 overflow-x-auto hide-scrollbar snap-x snap-mandatory py-4"
         >
-          {CARDS.map((card, index) => (
+          {cards.map((card, index) => (
             <motion.div 
               key={index}
               initial={{ opacity: 0, x: 50 }}

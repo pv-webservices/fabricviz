@@ -2,7 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-const SLIDES = [
+interface HeroBanner {
+  image: string;
+  headline: string;
+  subtext: string;
+  active?: boolean;
+  order?: number;
+}
+
+const SLIDES_FALLBACK: HeroBanner[] = [
   {
     image: 'https://images.unsplash.com/photo-1540574163026-643ea20ade25?q=80&w=2070&auto=format&fit=crop',
     headline: 'Texture That Speaks',
@@ -27,16 +35,44 @@ const SLIDES = [
 
 export default function Hero() {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [slides, setSlides] = useState<HeroBanner[]>(SLIDES_FALLBACK);
+  const [runningText, setRunningText] = useState<string>("Velvet • Chenille • Jacquard • Linen • Silk • Sheer • Blackout • Performance • Faux Leather • Suede • Brocade");
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/homepage/hero_banners`);
+        if (!res.ok) throw new Error('Failed to fetch hero_banners');
+        const data = await res.json();
+        
+        let fetchedSlides: HeroBanner[] = Array.isArray(data) ? data : (data.hero_banners || []);
+        fetchedSlides = fetchedSlides
+          .filter((slide: HeroBanner) => slide.active === true)
+          .sort((a: HeroBanner, b: HeroBanner) => (a.order || 0) - (b.order || 0));
+        
+        if (fetchedSlides.length > 0) {
+          setSlides(fetchedSlides);
+        }
+
+        if (data && data.running_bar_text) {
+          setRunningText(data.running_bar_text);
+        }
+      } catch (err) {
+        console.error('Error fetching hero data:', err);
+      }
+    };
+    fetchData();
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % SLIDES.length);
+      setCurrentIndex((prev) => (prev + 1) % slides.length);
     }, 6000);
     return () => clearInterval(timer);
-  }, []);
+  }, [slides.length]);
 
-  const nextSlide = () => setCurrentIndex((prev) => (prev + 1) % SLIDES.length);
-  const prevSlide = () => setCurrentIndex((prev) => (prev - 1 + SLIDES.length) % SLIDES.length);
+  const nextSlide = () => setCurrentIndex((prev) => (prev + 1) % slides.length);
+  const prevSlide = () => setCurrentIndex((prev) => (prev - 1 + slides.length) % slides.length);
 
   return (
     <div className="relative w-full aspect-[3/4] sm:aspect-[16/9] md:aspect-[2/1] lg:min-h-[85vh] bg-brand-dark overflow-hidden group">
@@ -52,7 +88,7 @@ export default function Hero() {
           {/* Background Image */}
           <div
             className="absolute inset-0 bg-cover bg-center origin-center transition-transform duration-[10000ms] ease-linear scale-110"
-            style={{ backgroundImage: `url(${SLIDES[currentIndex].image})` }}
+            style={{ backgroundImage: `url(${slides[currentIndex]?.image || ''})` }}
           />
           {/* Dark Overlay Gradient */}
           <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-[#1E1A14]/95 via-[#1E1A14]/70 md:via-[#1E1A14]/40 to-transparent" />
@@ -71,7 +107,7 @@ export default function Hero() {
             >
               <span className="text-brand-accent text-[10px] sm:text-xs font-bold tracking-[0.3em] mb-3 sm:mb-4 uppercase block">Premium Wholesale Textiles</span>
               <h1 className="font-serif text-5xl sm:text-6xl md:text-7xl lg:text-[80px] leading-[0.9] mb-4 sm:mb-6">
-                {SLIDES[currentIndex].headline}
+                {slides[currentIndex]?.headline}
               </h1>
             </motion.div>
           </AnimatePresence>
@@ -84,7 +120,7 @@ export default function Hero() {
               transition={{ duration: 0.8, delay: 0.5 }}
               className="text-white/80 text-base sm:text-lg md:text-xl font-light mb-8 max-w-sm sm:max-w-lg leading-relaxed"
             >
-              {SLIDES[currentIndex].subtext}
+              {slides[currentIndex]?.subtext}
             </motion.p>
           </AnimatePresence>
 
@@ -114,11 +150,11 @@ export default function Hero() {
           transition={{ ease: "linear", duration: 25, repeat: Infinity }}
           className="flex gap-8 sm:gap-12 whitespace-nowrap text-white/40 text-[8px] sm:text-[10px] font-bold tracking-widest uppercase pl-4 sm:pl-16 pt-1"
         >
-          <span>Velvet &bull; Chenille &bull; Jacquard &bull; Linen &bull; Silk &bull; Sheer &bull; Blackout &bull; Performance &bull; Faux Leather &bull; Suede &bull; Brocade</span>
-          <span>Velvet &bull; Chenille &bull; Jacquard &bull; Linen &bull; Silk &bull; Sheer &bull; Blackout &bull; Performance &bull; Faux Leather &bull; Suede &bull; Brocade</span>
-          <span>Velvet &bull; Chenille &bull; Jacquard &bull; Linen &bull; Silk &bull; Sheer &bull; Blackout &bull; Performance &bull; Faux Leather &bull; Suede &bull; Brocade</span>
-          <span>Velvet &bull; Chenille &bull; Jacquard &bull; Linen &bull; Silk &bull; Sheer &bull; Blackout &bull; Performance &bull; Faux Leather &bull; Suede &bull; Brocade</span>
-          <span>Velvet &bull; Chenille &bull; Jacquard &bull; Linen &bull; Silk &bull; Sheer &bull; Blackout &bull; Performance &bull; Faux Leather &bull; Suede &bull; Brocade</span>
+          <span>{runningText}</span>
+          <span>{runningText}</span>
+          <span>{runningText}</span>
+          <span>{runningText}</span>
+          <span>{runningText}</span>
         </motion.div>
       </div>
 
@@ -140,7 +176,7 @@ export default function Hero() {
 
       {/* Progress Dots */}
       <div className="absolute bottom-12 sm:bottom-20 left-1/2 -translate-x-1/2 z-20 flex gap-2">
-        {SLIDES.map((_, idx) => (
+        {slides.map((_, idx) => (
           <button
             key={idx}
             onClick={() => setCurrentIndex(idx)}

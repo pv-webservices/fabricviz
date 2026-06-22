@@ -50,7 +50,7 @@ export default function Hero() {
           className="absolute inset-0 z-0"
         >
           {/* Background Image */}
-          <div 
+          <div
             className="absolute inset-0 bg-cover bg-center origin-center transition-transform duration-[10000ms] ease-linear scale-110"
             style={{ backgroundImage: `url(${SLIDES[currentIndex].image})` }}
           />
@@ -75,9 +75,9 @@ export default function Hero() {
               </h1>
             </motion.div>
           </AnimatePresence>
-          
+
           <AnimatePresence mode="wait">
-            <motion.p 
+            <motion.p
               key={`p-${currentIndex}`}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -89,7 +89,7 @@ export default function Hero() {
           </AnimatePresence>
 
           <AnimatePresence mode="wait">
-            <motion.div 
+            <motion.div
               key={`b-${currentIndex}`}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -109,26 +109,28 @@ export default function Hero() {
 
       {/* Texture Strip (Animated Bottom Marquee) */}
       <div className="absolute bottom-0 left-0 w-full h-8 sm:h-12 bg-black/20 backdrop-blur-sm flex items-center overflow-hidden z-20">
-         <motion.div 
-            animate={{ x: ["0%", "-50%"] }}
-            transition={{ ease: "linear", duration: 25, repeat: Infinity }}
-            className="flex gap-8 sm:gap-12 whitespace-nowrap text-white/40 text-[8px] sm:text-[10px] font-bold tracking-widest uppercase pl-4 sm:pl-16 pt-1"
-         >
-            <span>Velvet &bull; Chenille &bull; Jacquard &bull; Linen &bull; Silk &bull; Sheer &bull; Blackout &bull; Performance &bull; Faux Leather &bull; Suede &bull; Brocade</span>
-            <span>Velvet &bull; Chenille &bull; Jacquard &bull; Linen &bull; Silk &bull; Sheer &bull; Blackout &bull; Performance &bull; Faux Leather &bull; Suede &bull; Brocade</span>
-            <span>Velvet &bull; Chenille &bull; Jacquard &bull; Linen &bull; Silk &bull; Sheer &bull; Blackout &bull; Performance &bull; Faux Leather &bull; Suede &bull; Brocade</span>
-         </motion.div>
+        <motion.div
+          animate={{ x: ["0%", "-50%"] }}
+          transition={{ ease: "linear", duration: 25, repeat: Infinity }}
+          className="flex gap-8 sm:gap-12 whitespace-nowrap text-white/40 text-[8px] sm:text-[10px] font-bold tracking-widest uppercase pl-4 sm:pl-16 pt-1"
+        >
+          <span>Velvet &bull; Chenille &bull; Jacquard &bull; Linen &bull; Silk &bull; Sheer &bull; Blackout &bull; Performance &bull; Faux Leather &bull; Suede &bull; Brocade</span>
+          <span>Velvet &bull; Chenille &bull; Jacquard &bull; Linen &bull; Silk &bull; Sheer &bull; Blackout &bull; Performance &bull; Faux Leather &bull; Suede &bull; Brocade</span>
+          <span>Velvet &bull; Chenille &bull; Jacquard &bull; Linen &bull; Silk &bull; Sheer &bull; Blackout &bull; Performance &bull; Faux Leather &bull; Suede &bull; Brocade</span>
+          <span>Velvet &bull; Chenille &bull; Jacquard &bull; Linen &bull; Silk &bull; Sheer &bull; Blackout &bull; Performance &bull; Faux Leather &bull; Suede &bull; Brocade</span>
+          <span>Velvet &bull; Chenille &bull; Jacquard &bull; Linen &bull; Silk &bull; Sheer &bull; Blackout &bull; Performance &bull; Faux Leather &bull; Suede &bull; Brocade</span>
+        </motion.div>
       </div>
 
       {/* Nav Controls */}
       <div className="absolute right-4 sm:right-8 lg:right-12 top-1/2 -translate-y-1/2 z-20 flex-col gap-3 opacity-0 group-hover:opacity-100 transition-opacity hidden md:flex">
-        <button 
+        <button
           onClick={prevSlide}
           className="p-3 sm:p-4 rounded-full bg-white/10 border border-white/10 backdrop-blur-sm text-white hover:bg-white/20 transition-all hover:scale-105"
         >
           <ChevronLeft className="w-6 h-6 stroke-[1.5] -translate-x-[1px]" />
         </button>
-        <button 
+        <button
           onClick={nextSlide}
           className="p-3 sm:p-4 rounded-full bg-white/10 border border-white/10 backdrop-blur-sm text-white hover:bg-white/20 transition-all hover:scale-105"
         >
@@ -139,7 +141,7 @@ export default function Hero() {
       {/* Progress Dots */}
       <div className="absolute bottom-12 sm:bottom-20 left-1/2 -translate-x-1/2 z-20 flex gap-2">
         {SLIDES.map((_, idx) => (
-          <button 
+          <button
             key={idx}
             onClick={() => setCurrentIndex(idx)}
             className={`h-1 transition-all duration-300 ${idx === currentIndex ? 'w-6 sm:w-8 bg-brand-accent' : 'w-3 sm:w-4 bg-white/40'}`}

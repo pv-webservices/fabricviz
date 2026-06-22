@@ -1,30 +1,10 @@
 import React from 'react';
-import { Facebook, Instagram, Twitter, Linkedin, MessageCircle } from 'lucide-react';
+import { Facebook, Instagram, Linkedin, MessageCircle } from 'lucide-react';
 
 export default function Footer() {
   return (
     <footer className="bg-brand-dark flex flex-col relative pt-[40px]">
       
-      {/* Newsletter Floating Bar (overlapping previous section visually) */}
-      <div className="mx-4 md:mx-8 -mt-24 mb-12 md:mb-16 relative z-10">
-        <div className="max-w-[1200px] mx-auto bg-[#2c2416] text-white p-6 sm:p-8 md:p-12 md:px-16 rounded-lg shadow-xl flex flex-col lg:flex-row items-center justify-between gap-6 md:gap-8 border border-white/5">
-          <div className="max-w-md text-center lg:text-left">
-            <h3 className="font-serif text-2xl md:text-3xl mb-2">Stay Inspired</h3>
-            <p className="text-white/70 font-light text-sm md:text-base">New Collections, Design Trends & Exclusive Offers straight to your inbox.</p>
-          </div>
-          <div className="w-full lg:w-auto flex-1 max-w-md flex flex-col sm:flex-row gap-2">
-            <input 
-              type="email" 
-              placeholder="Enter your email" 
-              className="w-full bg-white/5 border border-white/20 rounded-sm px-4 py-3 focus:outline-none focus:border-brand-accent text-white placeholder:text-white/40"
-            />
-            <button className="w-full sm:w-auto bg-brand-accent text-white px-8 py-3 rounded-sm font-bold tracking-widest text-[10px] uppercase hover:bg-yellow-700 transition-colors whitespace-nowrap">
-              Subscribe
-            </button>
-          </div>
-        </div>
-      </div>
-
       {/* Main Footer Columns */}
       <div className="max-w-[1440px] w-full mx-auto px-4 md:px-8 py-12 md:py-16 text-white/80 border-b border-white/5">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 md:gap-12">
@@ -46,24 +26,22 @@ export default function Footer() {
           <div>
             <h4 className="text-[10px] font-bold tracking-widest uppercase text-white mb-6">Navigation</h4>
             <ul className="space-y-4 text-sm font-light text-white/60">
-              <li><a href="#" className="hover:text-brand-accent transition-colors">Home</a></li>
-              <li><a href={import.meta.env.VITE_APP_URL || 'http://localhost:3000'} className="hover:text-brand-accent transition-colors">Shop Products</a></li>
-              <li><a href={import.meta.env.VITE_APP_URL || 'http://localhost:3000'} className="hover:text-brand-accent transition-colors">Collections by Look</a></li>
-              <li><a href="#" className="hover:text-brand-accent transition-colors">About Us</a></li>
-              <li><a href="#" className="hover:text-brand-accent transition-colors">Blog & Design Guides</a></li>
-              <li><a href="#" className="hover:text-brand-accent transition-colors">Contact</a></li>
+              <li><a href="/" className="hover:text-brand-accent transition-colors">Home</a></li>
+              <li><a href="/sofa" className="hover:text-brand-accent transition-colors">Sofa</a></li>
+              <li><a href="/curtain" className="hover:text-brand-accent transition-colors">Curtain</a></li>
+              <li><a href="/about" className="hover:text-brand-accent transition-colors">About Us</a></li>
+              <li><a href="/contact" className="hover:text-brand-accent transition-colors">Contact</a></li>
             </ul>
           </div>
 
-          {/* About */}
+          {/* Tools & Account */}
           <div>
-            <h4 className="text-[10px] font-bold tracking-widest uppercase text-white mb-6">About Fabricviz</h4>
+            <h4 className="text-[10px] font-bold tracking-widest uppercase text-white mb-6">Tools & Account</h4>
             <ul className="space-y-4 text-sm font-light text-white/60">
-              <li><a href="#" className="hover:text-brand-accent transition-colors">Our Story</a></li>
-              <li><a href="#" className="hover:text-brand-accent transition-colors">Collaborating Designers</a></li>
-              <li><a href="#" className="hover:text-brand-accent transition-colors">Sustainability Promise</a></li>
-              <li><a href="#" className="hover:text-brand-accent transition-colors">Trade Program</a></li>
-              <li><a href="#" className="hover:text-brand-accent transition-colors">Press & Media</a></li>
+              <li><a href={import.meta.env.VITE_APP_URL || '/login'} className="hover:text-brand-accent transition-colors">Visualizer</a></li>
+              <li><a href="/favorites" className="hover:text-brand-accent transition-colors">Favorites</a></li>
+              <li><a href="/login" className="hover:text-brand-accent transition-colors">Account</a></li>
+              <li><a href="#" className="hover:text-brand-accent transition-colors">Install App</a></li>
             </ul>
           </div>
 

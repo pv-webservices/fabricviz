@@ -39,21 +39,34 @@ export default function MasonryGrid() {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-10%" });
   const [items, setItems] = React.useState<MasonryItem[]>(MASONRY_ITEMS_FALLBACK);
+  const [tagLabel, setTagLabel] = React.useState<string>("Our Categories");
+  const [sectionTitle, setSectionTitle] = React.useState<string>("Product Collections");
+  const [subheading, setSubheading] = React.useState<string>("\"Life should be Chic, Glamorous and Colourful — and so should your home!\"");
 
   React.useEffect(() => {
     const fetchData = async () => {
       try {
         const res = await fetch(`${import.meta.env.VITE_API_URL}/api/homepage/masonry_grid`);
         if (!res.ok) throw new Error('Failed to fetch masonry_grid');
-        const data = await res.json();
         
-        let fetchedItems: MasonryItem[] = Array.isArray(data) ? data : (data.masonry_grid || []);
-        fetchedItems = fetchedItems
-          .filter((item: MasonryItem) => item.active === true)
-          .sort((a: MasonryItem, b: MasonryItem) => (a.order || 0) - (b.order || 0));
+        const json = await res.json();
+        const data = json.success ? json.data : null;
         
-        if (fetchedItems.length > 0) {
-          setItems(fetchedItems);
+        if (data) {
+          let fetchedItems: MasonryItem[] = Array.isArray(data) ? data : (data.items || []);
+          fetchedItems = fetchedItems
+            .filter((item: MasonryItem) => item.active !== false)
+            .sort((a: MasonryItem, b: MasonryItem) => (a.order || 0) - (b.order || 0));
+          
+          if (fetchedItems.length > 0) {
+            setItems(fetchedItems);
+          }
+          
+          if (!Array.isArray(data)) {
+            if (data.tagLabel) setTagLabel(data.tagLabel);
+            if (data.sectionTitle) setSectionTitle(data.sectionTitle);
+            if (data.subheading) setSubheading(data.subheading);
+          }
         }
       } catch (err) {
         console.error('Error fetching masonry data:', err);
@@ -65,10 +78,10 @@ export default function MasonryGrid() {
   return (
     <section className="py-16 md:py-24 max-w-[1440px] mx-auto px-4 md:px-8">
       <div className="text-center mb-10 md:mb-16">
-        <span className="text-brand-accent text-[10px] font-bold tracking-widest uppercase mb-2 block">Our Categories</span>
-        <h2 className="font-serif text-3xl md:text-5xl text-brand-text mb-3">Product Collections</h2>
+        <span className="text-brand-accent text-[10px] font-bold tracking-widest uppercase mb-2 block">{tagLabel}</span>
+        <h2 className="font-serif text-3xl md:text-5xl text-brand-text mb-3">{sectionTitle}</h2>
         <p className="italic font-sans text-sm md:text-lg text-brand-muted leading-relaxed max-w-2xl mx-auto">
-          "Life should be Chic, Glamorous and Colourful — and so should your home!"
+          {subheading}
         </p>
       </div>
 
@@ -86,8 +99,13 @@ export default function MasonryGrid() {
             {item.type === 'image' ? (
               <>
                 <img 
-                  src={item.src} 
-                  alt={item.alt}
+                  src={(() => {
+                    const url = item.mediaUrl || item.src;
+                    if (!url) return '';
+                    if (url.startsWith('http')) return url;
+                    return `${import.meta.env.VITE_API_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+                  })()}
+                  alt={item.alt || item.title}
                   className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"
                 />
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-300 flex flex-col justify-end p-4">

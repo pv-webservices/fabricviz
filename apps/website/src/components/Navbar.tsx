@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 interface MenuItem {
   name: string;
   href: string;
+  submenu?: { name: string; href: string }[];
 }
 
 interface HeaderData {
@@ -22,8 +23,8 @@ const MENU_ITEMS_FALLBACK: MenuItem[] = [
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [headerData, setHeaderData] = useState<HeaderData>({
-    logo_text: 'FABRICVIZ',
+  const [headerData, setHeaderData] = useState<{ logo_url: string, menu_items: typeof MENU_ITEMS_FALLBACK }>({
+    logo_url: '',
     menu_items: MENU_ITEMS_FALLBACK
   });
 
@@ -40,10 +41,11 @@ export default function Navbar() {
       try {
         const res = await fetch(`${import.meta.env.VITE_API_URL}/api/homepage/header`);
         if (!res.ok) throw new Error('Failed to fetch header data');
-        const data = await res.json();
+        const json = await res.json();
+        const data = json.success ? json.data : null;
         if (data) {
           setHeaderData({
-            logo_text: data.logo_text || 'FABRICVIZ',
+            logo_url: data.logo_url || '',
             menu_items: data.menu_items && data.menu_items.length > 0 ? data.menu_items : MENU_ITEMS_FALLBACK
           });
         }
@@ -76,22 +78,48 @@ export default function Navbar() {
           </button>
 
           {/* Center/Left Logo */}
-          <div className={`font-serif text-xl sm:text-2xl lg:text-3xl font-semibold tracking-tighter transition-colors ${
+          <div className={`transition-colors ${
             !isDarkText ? 'text-white' : 'text-brand-text'
           }`}>
-            <a href="/">{headerData.logo_text}</a>
+            <a href="/" className="block h-8 md:h-10">
+              {headerData.logo_url ? (
+                <img src={headerData.logo_url} alt="Logo" className="h-full w-auto object-contain" />
+              ) : (
+                <span className="font-serif text-xl sm:text-2xl lg:text-3xl font-semibold tracking-tighter">FABRICVIZ</span>
+              )}
+            </a>
           </div>
 
           {/* Desktop Navigation */}
-          <ul className="hidden lg:flex items-center gap-6 text-[11px] font-semibold tracking-widest uppercase">
+          <ul className="hidden lg:flex items-center gap-6 text-[11px] font-semibold tracking-widest uppercase relative">
             {headerData.menu_items.map((menu) => (
-              <li key={menu.name} className="py-2">
+              <li key={menu.name} className="py-2 relative group">
                 <a 
                   href={menu.href} 
-                  className={`transition-colors hover:text-brand-accent ${!isDarkText ? 'text-white/90 group-hover:text-brand-text' : 'text-brand-text'}`}
+                  className={`transition-colors flex items-center gap-1 hover:text-brand-accent ${!isDarkText ? 'text-white/90 group-hover:text-brand-text' : 'text-brand-text'}`}
                 >
                   {menu.name}
+                  {menu.submenu && menu.submenu.length > 0 && (
+                    <svg className="w-3 h-3 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                  )}
                 </a>
+                
+                {/* Desktop Dropdown */}
+                {menu.submenu && menu.submenu.length > 0 && (
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-0 pt-4 opacity-0 invisible group-hover:opacity-100 group-hover:visible min-w-[200px] z-[60]">
+                    <div className="bg-white shadow-xl border border-black/5 rounded-sm p-2 flex flex-col gap-1">
+                      {menu.submenu.map(sub => (
+                        <a 
+                          key={sub.name} 
+                          href={sub.href} 
+                          className="px-4 py-3 text-brand-text hover:text-brand-accent hover:bg-slate-50 transition-colors block whitespace-nowrap"
+                        >
+                          {sub.name}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </li>
             ))}
           </ul>
@@ -125,6 +153,15 @@ export default function Navbar() {
               {headerData.menu_items.map(menu => (
                 <li key={menu.name} className="border-b border-black/5 pb-4">
                   <a href={menu.href} className="font-semibold text-brand-text tracking-wider hover:text-brand-accent block w-full">{menu.name}</a>
+                  {menu.submenu && menu.submenu.length > 0 && (
+                    <ul className="mt-3 pl-4 flex flex-col gap-3 border-l-2 border-brand-accent/20">
+                      {menu.submenu.map(sub => (
+                        <li key={sub.name}>
+                          <a href={sub.href} className="text-base text-brand-muted hover:text-brand-accent block">{sub.name}</a>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </li>
               ))}
             </ul>

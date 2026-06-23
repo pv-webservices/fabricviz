@@ -27,15 +27,17 @@ export default function StatsBar() {
       try {
         const res = await fetch(`${import.meta.env.VITE_API_URL}/api/homepage/stats_bar`);
         if (!res.ok) throw new Error('Failed to fetch stats_bar');
-        const data = await res.json();
+        const json = await res.json();
+        const data = json.success ? json.data : null;
+        if (data) {
+          let fetchedStats: StatItem[] = Array.isArray(data) ? data : (data.stats || data.stats_bar || []);
+          fetchedStats = fetchedStats
+            .filter((stat: StatItem) => stat.active !== false)
+            .sort((a: StatItem, b: StatItem) => (a.order || 0) - (b.order || 0));
         
-        let fetchedStats: StatItem[] = Array.isArray(data) ? data : (data.stats_bar || []);
-        fetchedStats = fetchedStats
-          .filter((stat: StatItem) => stat.active === true)
-          .sort((a: StatItem, b: StatItem) => (a.order || 0) - (b.order || 0));
-        
-        if (fetchedStats.length > 0) {
-          setStats(fetchedStats);
+          if (fetchedStats.length > 0) {
+            setStats(fetchedStats);
+          }
         }
       } catch (err) {
         console.error('Error fetching stats data:', err);

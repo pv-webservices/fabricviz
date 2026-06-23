@@ -4,8 +4,12 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface TextileCard {
   image: string;
-  name: string;
-  code: string;
+  name?: string;
+  title?: string;
+  code?: string;
+  text?: string;
+  ctaText?: string;
+  linkUrl?: string;
   active?: boolean;
   order?: number;
 }
@@ -23,21 +27,34 @@ export default function HomeTextilesCarousel() {
   const isInView = useInView(ref, { once: true, margin: "-10%" });
   const scrollRef = useRef<HTMLDivElement>(null);
   const [cards, setCards] = useState<TextileCard[]>(CARDS_FALLBACK);
+  const [tagLabel, setTagLabel] = useState<string>("Home Textiles");
+  const [sectionTitle, setSectionTitle] = useState<string>("Our Collection");
+  const [subtitle, setSubtitle] = useState<string>("From upholstery fabrics to wall hangings, explore our full collections and see where your creativity takes you.");
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const res = await fetch(`${import.meta.env.VITE_API_URL}/api/homepage/textiles_carousel`);
         if (!res.ok) throw new Error('Failed to fetch textiles_carousel');
-        const data = await res.json();
         
-        let fetchedCards: TextileCard[] = Array.isArray(data) ? data : (data.textiles_carousel || []);
-        fetchedCards = fetchedCards
-          .filter((card: TextileCard) => card.active === true)
-          .sort((a: TextileCard, b: TextileCard) => (a.order || 0) - (b.order || 0));
+        const json = await res.json();
+        const data = json.success ? json.data : null;
         
-        if (fetchedCards.length > 0) {
-          setCards(fetchedCards);
+        if (data) {
+          let fetchedCards: TextileCard[] = Array.isArray(data) ? data : (data.cards || []);
+          fetchedCards = fetchedCards
+            .filter((card: TextileCard) => card.active !== false)
+            .sort((a: TextileCard, b: TextileCard) => (a.order || 0) - (b.order || 0));
+          
+          if (fetchedCards.length > 0) {
+            setCards(fetchedCards);
+          }
+          
+          if (!Array.isArray(data)) {
+            if (data.tagLabel) setTagLabel(data.tagLabel);
+            if (data.sectionTitle) setSectionTitle(data.sectionTitle);
+            if (data.subtitle) setSubtitle(data.subtitle);
+          }
         }
       } catch (err) {
         console.error('Error fetching textiles data:', err);
@@ -68,12 +85,12 @@ export default function HomeTextilesCarousel() {
           transition={{ duration: 0.8 }}
           className="mb-8 md:mb-12"
         >
-          <div className="text-brand-accent tracking-widest text-[10px] font-bold mb-4 uppercase">Home Textiles</div>
+          <div className="text-brand-accent tracking-widest text-[10px] font-bold mb-4 uppercase">{tagLabel}</div>
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div className="max-w-2xl">
-              <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl lg:text-6xl mb-4">Our Collection</h2>
+              <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl lg:text-6xl mb-4">{sectionTitle}</h2>
               <p className="text-white/70 text-base sm:text-lg font-light">
-                From upholstery fabrics to wall hangings, explore our full collections and see where your creativity takes you.
+                {subtitle}
               </p>
             </div>
             <div className="flex gap-4 self-start md:self-auto">
@@ -101,20 +118,25 @@ export default function HomeTextilesCarousel() {
             >
               <div className="aspect-[16/10] overflow-hidden rounded-lg mb-4 md:mb-6 relative">
                 <img 
-                  src={card.image} 
-                  alt={card.name} 
+                  src={(() => {
+                    const url = card.mediaUrl || card.image;
+                    if (!url) return '';
+                    if (url.startsWith('http')) return url;
+                    return `${import.meta.env.VITE_API_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+                  })()}
+                  alt={card.title || card.name} 
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 />
               </div>
               <div>
                 <div className="text-white/60 text-[10px] tracking-widest font-bold uppercase mb-2">
-                  {card.code}
+                  {card.text || card.code}
                 </div>
                 <h3 className="font-serif text-xl sm:text-2xl text-white mb-3 group-hover:text-brand-accent transition-colors">
-                  {card.name}
+                  {card.title || card.name}
                 </h3>
-                <a href="#" className="inline-flex items-center text-[10px] md:text-xs font-bold tracking-widest uppercase text-white border-b border-brand-accent pb-1 group-hover:text-brand-accent transition-colors">
-                  View Product
+                <a href={card.linkUrl || '#'} className="inline-flex items-center text-[10px] md:text-xs font-bold tracking-widest uppercase text-white border-b border-brand-accent pb-1 group-hover:text-brand-accent transition-colors">
+                  {card.ctaText || 'View Product'}
                 </a>
               </div>
             </motion.div>

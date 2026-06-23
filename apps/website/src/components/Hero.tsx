@@ -4,8 +4,13 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface HeroBanner {
   image: string;
+  tagLabel?: string;
   headline: string;
   subtext: string;
+  cta1_text?: string;
+  cta1_link?: string;
+  cta2_text?: string;
+  cta2_link?: string;
   active?: boolean;
   order?: number;
 }
@@ -41,21 +46,28 @@ export default function Hero() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/homepage/hero_banners`);
-        if (!res.ok) throw new Error('Failed to fetch hero_banners');
-        const data = await res.json();
-        
-        let fetchedSlides: HeroBanner[] = Array.isArray(data) ? data : (data.hero_banners || []);
-        fetchedSlides = fetchedSlides
-          .filter((slide: HeroBanner) => slide.active === true)
-          .sort((a: HeroBanner, b: HeroBanner) => (a.order || 0) - (b.order || 0));
-        
-        if (fetchedSlides.length > 0) {
-          setSlides(fetchedSlides);
+        const [heroRes, runningRes] = await Promise.all([
+          fetch(`${import.meta.env.VITE_API_URL}/api/homepage/hero_banners`),
+          fetch(`${import.meta.env.VITE_API_URL}/api/homepage/running_bar`).catch(() => null)
+        ]);
+
+        if (heroRes.ok) {
+          const json = await heroRes.json();
+          const data = json.success ? json.data : null;
+          if (data && data.items && data.items.length > 0) {
+            let fetchedSlides = data.items
+              .filter((slide: HeroBanner) => slide.active !== false)
+              .sort((a: HeroBanner, b: HeroBanner) => (a.order || 0) - (b.order || 0));
+            setSlides(fetchedSlides);
+          }
         }
 
-        if (data && data.running_bar_text) {
-          setRunningText(data.running_bar_text);
+        if (runningRes && runningRes.ok) {
+          const json = await runningRes.json();
+          const rbData = json.success ? json.data : null;
+          if (rbData && rbData.text) {
+            setRunningText(rbData.text);
+          }
         }
       } catch (err) {
         console.error('Error fetching hero data:', err);
@@ -88,7 +100,12 @@ export default function Hero() {
           {/* Background Image */}
           <div
             className="absolute inset-0 bg-cover bg-center origin-center transition-transform duration-[10000ms] ease-linear scale-110"
-            style={{ backgroundImage: `url(${slides[currentIndex]?.image || ''})` }}
+            style={{ backgroundImage: `url(${(() => {
+              const url = slides[currentIndex]?.mediaUrl || slides[currentIndex]?.image || '';
+              if (!url) return '';
+              if (url.startsWith('http')) return url;
+              return `${import.meta.env.VITE_API_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+            })()})` }}
           />
           {/* Dark Overlay Gradient */}
           <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-[#1E1A14]/95 via-[#1E1A14]/70 md:via-[#1E1A14]/40 to-transparent" />
@@ -105,7 +122,11 @@ export default function Hero() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.3 }}
             >
-              <span className="text-brand-accent text-[10px] sm:text-xs font-bold tracking-[0.3em] mb-3 sm:mb-4 uppercase block">Premium Wholesale Textiles</span>
+              {slides[currentIndex]?.tagLabel && (
+                <span className="text-brand-accent text-[10px] sm:text-xs font-bold tracking-[0.3em] mb-3 sm:mb-4 uppercase block">
+                  {slides[currentIndex].tagLabel}
+                </span>
+              )}
               <h1 className="font-serif text-5xl sm:text-6xl md:text-7xl lg:text-[80px] leading-[0.9] mb-4 sm:mb-6">
                 {slides[currentIndex]?.headline}
               </h1>
@@ -132,12 +153,16 @@ export default function Hero() {
               transition={{ duration: 0.8, delay: 0.7 }}
               className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 max-w-sm sm:max-w-none"
             >
-              <a href={`${import.meta.env.VITE_APP_URL || 'http://localhost:3000'}/login`} className="bg-brand-accent text-white px-6 sm:px-8 py-3 sm:py-4 text-[10px] sm:text-xs font-bold tracking-widest uppercase flex items-center justify-center gap-2 hover:bg-yellow-700 transition-colors">
-                Launch App <span className="text-lg">&rarr;</span>
-              </a>
-              <a href={`${import.meta.env.VITE_APP_URL || 'http://localhost:3000'}/login`} className="border border-white/40 text-white px-6 sm:px-8 py-3 sm:py-4 text-[10px] sm:text-xs font-bold tracking-widest uppercase hover:bg-white/10 transition-colors text-center inline-block">
-                Request Samples
-              </a>
+              {slides[currentIndex]?.cta1_text && (
+                <a href={slides[currentIndex].cta1_link || '#'} className="bg-brand-accent text-white px-6 sm:px-8 py-3 sm:py-4 text-[10px] sm:text-xs font-bold tracking-widest uppercase flex items-center justify-center gap-2 hover:bg-yellow-700 transition-colors">
+                  {slides[currentIndex].cta1_text} <span className="text-lg">&rarr;</span>
+                </a>
+              )}
+              {slides[currentIndex]?.cta2_text && (
+                <a href={slides[currentIndex].cta2_link || '#'} className="border border-white/40 text-white px-6 sm:px-8 py-3 sm:py-4 text-[10px] sm:text-xs font-bold tracking-widest uppercase hover:bg-white/10 transition-colors text-center inline-block">
+                  {slides[currentIndex].cta2_text}
+                </a>
+              )}
             </motion.div>
           </AnimatePresence>
         </div>

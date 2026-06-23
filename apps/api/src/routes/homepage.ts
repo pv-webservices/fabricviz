@@ -4,7 +4,7 @@ import { requireAdmin } from '../middleware/authenticate';
 export default async function homepageRoutes(fastify: FastifyInstance) {
   // GET /api/homepage/:section
   // Public route to fetch a specific homepage section's content
-  fastify.get('/homepage/:section', async (req: FastifyRequest<{ Params: { section: string } }>, reply: FastifyReply) => {
+  fastify.get('/api/homepage/:section', async (req: FastifyRequest<{ Params: { section: string } }>, reply: FastifyReply) => {
     const { section } = req.params;
     
     try {
@@ -17,7 +17,7 @@ export default async function homepageRoutes(fastify: FastifyInstance) {
         return reply.code(404).send({ error: 'Section not found' });
       }
       
-      return reply.send(res.rows[0].data);
+      return reply.send({ success: true, data: res.rows[0].data });
     } catch (err) {
       fastify.log.error(err);
       return reply.code(500).send({ error: 'Internal Server Error' });
@@ -26,7 +26,7 @@ export default async function homepageRoutes(fastify: FastifyInstance) {
 
   // PUT /api/homepage/:section
   // Protected route to update a specific homepage section's content
-  fastify.put('/homepage/:section', { preHandler: [requireAdmin] }, async (req: FastifyRequest<{ Params: { section: string }, Body: any }>, reply: FastifyReply) => {
+  fastify.put<{ Params: { section: string }, Body: any }>('/api/homepage/:section', { preHandler: [requireAdmin] }, async (req, reply) => {
     const { section } = req.params;
     const body = req.body;
     

@@ -87,7 +87,8 @@ async function uploadToLocal(fileBuffer: Buffer, filename: string): Promise<stri
   const filePath = path.join(LOCAL_UPLOAD_DIR, filename);
   await fs.promises.writeFile(filePath, fileBuffer);
 
-  return `/uploads/${filename}`;
+  const baseUrl = process.env.API_URL || 'http://localhost:4000';
+  return `${baseUrl}/uploads/${filename}`;
 }
 
 // ── deleteFile ───────────────────────────────────────────────────────────

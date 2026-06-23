@@ -162,6 +162,13 @@ CREATE TABLE audit_logs (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TABLE homepage_content (
+  id SERIAL PRIMARY KEY,
+  section_name TEXT UNIQUE NOT NULL,
+  data JSONB NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Indexes for performance
 CREATE INDEX idx_fabrics_collection ON fabrics(collection_id);
 CREATE INDEX idx_fabrics_end_use ON fabrics(end_use);

@@ -1,34 +1,30 @@
 import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
-import Hero from './components/Hero';
-import StatsBar from './components/StatsBar';
-import MasonryGrid from './components/MasonryGrid';
-import HomeTextilesCarousel from './components/HomeTextilesCarousel';
-import FabricFinder from './components/FabricFinder';
-import NewArrivals from './components/NewArrivals';
-import DesignerCurated from './components/DesignerCurated';
-import USPBand from './components/USPBand';
 import Contact from './components/Contact';
 import Footer from './components/Footer';
+import HomePage from './pages/HomePage';
+import CategoryPage from './pages/CategoryPage';
+import CatalogPage from './pages/CatalogPage';
 
 export default function App() {
   return (
-    <div className="w-full min-h-screen bg-brand-bg text-brand-text font-sans">
-      <Navbar />
-      
-      <main>
-        <Hero />
-        <StatsBar />
-        <MasonryGrid />
-        <HomeTextilesCarousel />
-        <FabricFinder />
-        <NewArrivals />
-        <DesignerCurated />
-        <USPBand />
-        <Contact />
-      </main>
+    <BrowserRouter>
+      <div className="w-full min-h-screen bg-brand-bg text-brand-text font-sans">
+        <Navbar />
+        
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/sofa" element={<CategoryPage endUse="sofa" />} />
+          <Route path="/curtain" element={<CategoryPage endUse="curtain" />} />
+          {/* Keep dynamic category route just in case other items like rug/wallpaper are clicked via generic paths */}
+          <Route path="/category/:endUse" element={<CategoryPage endUse="" />} />
+          <Route path="/catalog/:id" element={<CatalogPage />} />
+        </Routes>
 
-      <Footer />
-    </div>
+        <Contact />
+        <Footer />
+      </div>
+    </BrowserRouter>
   );
 }

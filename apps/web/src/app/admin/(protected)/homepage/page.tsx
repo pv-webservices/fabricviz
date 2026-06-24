@@ -38,6 +38,16 @@ export default function HomepageEditor() {
   const [statsData, setStatsData] = useState<any>({ stats: [] });
   const [masonryData, setMasonryData] = useState<any>({ tagLabel: '', sectionTitle: '', subheading: '', items: [] });
   const [carouselData, setCarouselData] = useState<any>({ tagLabel: '', sectionTitle: '', subtitle: '', cards: [] });
+  const [collections, setCollections] = useState<any[]>([]);
+
+  const loadCollections = useCallback(async () => {
+    try {
+      const data = await fetchApi<{ items: any[] }>('/api/collections?limit=100', { requireAuth: true });
+      setCollections(data.items || []);
+    } catch (err) {
+      console.error('Failed to load collections', err);
+    }
+  }, []);
 
   const loadData = useCallback(async (section: string) => {
     setLoading(true);
@@ -58,7 +68,10 @@ export default function HomepageEditor() {
 
   useEffect(() => {
     loadData(activeTab);
-  }, [activeTab, loadData]);
+    if (activeTab === 'header' && collections.length === 0) {
+      loadCollections();
+    }
+  }, [activeTab, loadData, loadCollections, collections.length]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -153,6 +166,7 @@ export default function HomepageEditor() {
                 onChange={setHeaderData} 
                 onUpload={handleFileUpload} 
                 generateId={generateId} 
+                collections={collections}
               />
             )}
             {activeTab === 'hero_banners' && (
@@ -201,7 +215,7 @@ export default function HomepageEditor() {
 
 // ---------------- Editors ----------------
 
-function HeaderEditor({ data, onChange, onUpload, generateId }: any) {
+function HeaderEditor({ data, onChange, onUpload, generateId, collections }: any) {
   const addMenuItem = () => {
     onChange({
       ...data,
@@ -268,24 +282,24 @@ function HeaderEditor({ data, onChange, onUpload, generateId }: any) {
       <div className="space-y-2">
         <Label>Logo Image</Label>
         <div className="flex gap-4 items-end">
-          <Input 
-            placeholder="Logo Image URL" 
-            value={data.logo_url || ''} 
-            onChange={e => onChange({ ...data, logo_url: e.target.value })} 
-            className="flex-1"
-          />
+          <div className="flex-1 space-y-1">
+            <Label className="text-xs text-muted-foreground">Upload from local drive</Label>
+            <Input 
+              type="file" 
+              accept="image/*"
+              onChange={(e) => {
+                onUpload(e, (url: string) => {
+                  onChange({...data, logo_url: url});
+                });
+              }}
+            />
+          </div>
           <div className="w-32 h-10 border rounded overflow-hidden flex items-center justify-center bg-gray-50 relative">
             {data.logo_url ? (
               <img src={getImageUrl(data.logo_url)} alt="Logo" className="max-h-full max-w-full object-contain" />
             ) : (
               <span className="text-xs text-muted-foreground">Preview</span>
             )}
-            <input 
-              type="file" 
-              className="absolute inset-0 opacity-0 cursor-pointer" 
-              accept="image/*"
-              onChange={(e) => onUpload(e.target.files?.[0]).then((url: string) => { if(url) onChange({...data, logo_url: url}) })}
-            />
           </div>
         </div>
       </div>
@@ -331,9 +345,27 @@ function HeaderEditor({ data, onChange, onUpload, generateId }: any) {
                   </div>
                   {(item.submenu || []).map((sub: any, i: number) => (
                     <div key={i} className="flex items-center gap-2">
-                      <Input placeholder="Subname" className="h-8 text-sm" value={sub.name} onChange={e => updateSubmenuItem(item.id, i, { name: e.target.value })} />
-                      <Input placeholder="URL" className="h-8 text-sm" value={sub.href} onChange={e => updateSubmenuItem(item.id, i, { href: e.target.value })} />
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => removeSubmenuItem(item.id, i)}>
+                      <select
+                        className="h-8 text-sm rounded-md border border-input bg-background px-2 focus:ring-2 focus:ring-slate-900 min-w-[140px]"
+                        onChange={e => {
+                          const selected = collections?.find((c: any) => c.id === e.target.value);
+                          if (selected) {
+                            updateSubmenuItem(item.id, i, { 
+                              name: selected.name, 
+                              href: `/collections/${selected.id}` 
+                            });
+                          }
+                        }}
+                        value=""
+                      >
+                        <option value="" disabled>Link Collection...</option>
+                        {collections?.map((c: any) => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                      <Input placeholder="Subname" className="h-8 text-sm flex-1" value={sub.name} onChange={e => updateSubmenuItem(item.id, i, { name: e.target.value })} />
+                      <Input placeholder="URL" className="h-8 text-sm flex-1" value={sub.href} onChange={e => updateSubmenuItem(item.id, i, { href: e.target.value })} />
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 shrink-0" onClick={() => removeSubmenuItem(item.id, i)}>
                         <X className="h-3 w-3" />
                       </Button>
                     </div>

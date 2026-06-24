@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Menu, X, Heart, User, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Link } from 'react-router-dom';
 
 interface MenuItem {
   name: string;
@@ -93,29 +94,32 @@ export default function Navbar() {
           {/* Desktop Navigation */}
           <ul className="hidden lg:flex items-center gap-6 text-[11px] font-semibold tracking-widest uppercase relative">
             {headerData.menu_items.map((menu) => (
-              <li key={menu.name} className="py-2 relative group">
-                <a 
-                  href={menu.href} 
+              <li key={menu.name} className="py-2 relative group/navitem">
+                <Link 
+                  to={menu.href} 
                   className={`transition-colors flex items-center gap-1 hover:text-brand-accent ${!isDarkText ? 'text-white/90 group-hover:text-brand-text' : 'text-brand-text'}`}
                 >
                   {menu.name}
                   {menu.submenu && menu.submenu.length > 0 && (
                     <svg className="w-3 h-3 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                   )}
-                </a>
+                </Link>
                 
                 {/* Desktop Dropdown */}
                 {menu.submenu && menu.submenu.length > 0 && (
-                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-0 pt-4 opacity-0 invisible group-hover:opacity-100 group-hover:visible min-w-[200px] z-[60]">
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-0 pt-4 opacity-0 invisible group-hover/navitem:opacity-100 group-hover/navitem:visible min-w-[200px] z-[60]">
                     <div className="bg-white shadow-xl border border-black/5 rounded-sm p-2 flex flex-col gap-1">
+                      <Link to={menu.href} className="px-4 py-3 bg-[#f5c73c] text-slate-900 font-semibold hover:bg-[#eab308] transition-colors block whitespace-nowrap rounded-t-sm">
+                        View all {menu.name}
+                      </Link>
                       {menu.submenu.map(sub => (
-                        <a 
+                        <Link 
                           key={sub.name} 
-                          href={sub.href} 
+                          to={sub.href} 
                           className="px-4 py-3 text-brand-text hover:text-brand-accent hover:bg-slate-50 transition-colors block whitespace-nowrap"
                         >
                           {sub.name}
-                        </a>
+                        </Link>
                       ))}
                     </div>
                   </div>
@@ -152,12 +156,15 @@ export default function Navbar() {
             <ul className="flex flex-col gap-6 text-lg py-6">
               {headerData.menu_items.map(menu => (
                 <li key={menu.name} className="border-b border-black/5 pb-4">
-                  <a href={menu.href} className="font-semibold text-brand-text tracking-wider hover:text-brand-accent block w-full">{menu.name}</a>
+                  <Link to={menu.href} className="font-semibold text-brand-text tracking-wider hover:text-brand-accent block w-full">{menu.name}</Link>
                   {menu.submenu && menu.submenu.length > 0 && (
                     <ul className="mt-3 pl-4 flex flex-col gap-3 border-l-2 border-brand-accent/20">
+                      <li>
+                        <Link to={menu.href} className="text-base text-brand-terracotta font-semibold hover:text-brand-accent block">View all {menu.name}</Link>
+                      </li>
                       {menu.submenu.map(sub => (
                         <li key={sub.name}>
-                          <a href={sub.href} className="text-base text-brand-muted hover:text-brand-accent block">{sub.name}</a>
+                          <Link to={sub.href} className="text-base text-brand-muted hover:text-brand-accent block">{sub.name}</Link>
                         </li>
                       ))}
                     </ul>

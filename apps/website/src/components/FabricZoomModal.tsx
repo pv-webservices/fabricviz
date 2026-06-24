@@ -32,9 +32,9 @@ export default function FabricZoomModal({ fabric, collection, onClose }: FabricZ
 
         {/* Left Side: Image */}
         <div className="w-full md:w-3/5 bg-black p-4 flex items-center justify-center min-h-[300px]">
-          {fabric.swatch_url ? (
+          {(fabric.swatch_url || fabric.texture_url) ? (
             <img 
-              src={getImageUrl(fabric.swatch_url)} 
+              src={getImageUrl(fabric.swatch_url || fabric.texture_url)} 
               alt={fabric.name} 
               className="w-full h-full object-contain rounded-lg"
             />

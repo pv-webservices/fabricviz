@@ -20,6 +20,7 @@ export default function App() {
           {/* Keep dynamic category route just in case other items like rug/wallpaper are clicked via generic paths */}
           <Route path="/category/:endUse" element={<CategoryPage endUse="" />} />
           <Route path="/catalog/:id" element={<CatalogPage />} />
+          <Route path="/collections/:id" element={<CatalogPage />} />
         </Routes>
 
         <Contact />

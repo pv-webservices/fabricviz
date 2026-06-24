@@ -67,9 +67,9 @@ export default function CategoryPage({ endUse: endUseProp }: CategoryPageProps) 
                 className="group rounded-xl overflow-hidden bg-brand-alt/5 border border-white/5 hover:border-brand-accent transition-colors block"
               >
                 <div className="aspect-square relative overflow-hidden bg-brand-dark/50">
-                  {collection.thumbnail_url ? (
+                  {collection.thumbnail_url || collection.texture_url ? (
                     <img 
-                      src={getImageUrl(collection.thumbnail_url)} 
+                      src={getImageUrl(collection.thumbnail_url || collection.texture_url)} 
                       alt={collection.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />

@@ -124,9 +124,9 @@ export default function CatalogPage() {
               {displayedFabrics.map((fabric) => (
                 <div key={fabric.id} className="group flex flex-col cursor-pointer" onClick={() => setSelectedFabric(fabric)}>
                   <div className="relative aspect-square rounded-lg overflow-hidden bg-brand-alt/10 mb-2 shadow-md">
-                    {fabric.swatch_url ? (
+                    {(fabric.swatch_url || fabric.texture_url) ? (
                       <img 
-                        src={getImageUrl(fabric.swatch_url)} 
+                        src={getImageUrl(fabric.swatch_url || fabric.texture_url)} 
                         alt={fabric.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />

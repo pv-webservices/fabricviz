@@ -430,6 +430,9 @@ function HeroEditor({ data, onChange, onUpload, generateId }: any) {
                   accept={item.type === 'image' ? 'image/*' : 'video/*'}
                   onChange={(e) => onUpload(e, (url: string) => updateItem(item.id, { mediaUrl: url }))} 
                 />
+                <p className="text-[10px] text-muted-foreground mt-1 leading-tight">
+                  Max 50MB. Formats: JPEG, PNG, WEBP, SVG, GIF, MP4, WEBM, MOV.
+                </p>
                 {item.mediaUrl && (
                   item.type === 'video' ? (
                     <div className="h-24 bg-slate-200 flex items-center justify-center rounded border text-xs text-slate-500 overflow-hidden relative">

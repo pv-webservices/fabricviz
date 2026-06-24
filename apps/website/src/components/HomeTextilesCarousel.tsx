@@ -34,8 +34,8 @@ export default function HomeTextilesCarousel() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/homepage/textiles_carousel`);
-        if (!res.ok) throw new Error('Failed to fetch textiles_carousel');
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/homepage/home_textiles_carousel`);
+        if (!res.ok) throw new Error('Failed to fetch home_textiles_carousel');
         
         const json = await res.json();
         const data = json.success ? json.data : null;

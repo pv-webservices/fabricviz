@@ -94,9 +94,9 @@ export default function Navbar() {
           {/* Desktop Navigation */}
           <ul className="hidden lg:flex items-center gap-6 text-[11px] font-semibold tracking-widest uppercase relative">
             {headerData.menu_items.map((menu) => (
-              <li key={menu.name} className="py-2 relative group/navitem">
+              <li key={menu.name} className="relative group/navitem">
                 <Link 
-                  to={menu.href} 
+                  to={menu.name.toUpperCase() === 'SOFA' ? '/sofa' : menu.name.toUpperCase() === 'CURTAIN' ? '/curtain' : (menu.href || '/')}
                   className={`transition-colors flex items-center gap-1 hover:text-brand-accent ${!isDarkText ? 'text-white/90 group-hover:text-brand-text' : 'text-brand-text'}`}
                 >
                   {menu.name}
@@ -109,7 +109,10 @@ export default function Navbar() {
                 {menu.submenu && menu.submenu.length > 0 && (
                   <div className="absolute top-full left-1/2 -translate-x-1/2 mt-0 pt-4 opacity-0 invisible group-hover/navitem:opacity-100 group-hover/navitem:visible min-w-[200px] z-[60]">
                     <div className="bg-white shadow-xl border border-black/5 rounded-sm p-2 flex flex-col gap-1">
-                      <Link to={menu.href} className="px-4 py-3 bg-[#f5c73c] text-slate-900 font-semibold hover:bg-[#eab308] transition-colors block whitespace-nowrap rounded-t-sm">
+                      <Link 
+                        to={menu.name.toUpperCase() === 'SOFA' ? '/sofa' : menu.name.toUpperCase() === 'CURTAIN' ? '/curtain' : menu.href} 
+                        className="px-4 py-3 bg-[#f5c73c] text-slate-900 font-semibold hover:bg-[#eab308] transition-colors block whitespace-nowrap rounded-t-sm"
+                      >
                         View all {menu.name}
                       </Link>
                       {menu.submenu.map(sub => (

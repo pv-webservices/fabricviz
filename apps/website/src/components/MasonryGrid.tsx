@@ -1,9 +1,11 @@
 import React, { useRef } from 'react';
 import { motion, useInView } from 'motion/react';
+import { Link } from 'react-router-dom';
 
 interface MasonryItem {
   type: string;
   src?: string;
+  mediaUrl?: string;
   alt?: string;
   span?: string;
   span_preset?: string;
@@ -12,6 +14,10 @@ interface MasonryItem {
   textColor?: string;
   active?: boolean;
   order?: number;
+  link_collection_id?: string;
+  link_collection_slug?: string;
+  link_fabric_id?: string;
+  link_fabric_code?: string;
 }
 
 const SPAN_MAP: Record<string, string> = {
@@ -96,29 +102,44 @@ export default function MasonryGrid() {
             transition={{ duration: 0.6, delay: index * 0.08, ease: "easeOut" }}
             className={`relative rounded-lg overflow-hidden group ${spanClass}`}
           >
-            {item.type === 'image' ? (
-              <>
-                <img 
-                  src={(() => {
-                    const url = item.mediaUrl || item.src;
-                    if (!url) return '';
-                    if (url.startsWith('http')) return url;
-                    return `${import.meta.env.VITE_API_URL}${url.startsWith('/') ? '' : '/'}${url}`;
-                  })()}
-                  alt={item.alt || item.title}
-                  className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"
-                />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-300 flex flex-col justify-end p-4">
-                  <motion.button 
-                    initial={{ opacity: 0, y: 10 }}
-                    whileHover={{ scale: 1.05 }}
-                    className="opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition-all duration-300 bg-white text-brand-text px-6 py-3 rounded-sm font-bold text-[10px] tracking-widest uppercase self-center mb-4 border border-black/5"
-                  >
-                    View Collection &rarr;
-                  </motion.button>
-                </div>
-              </>
-            ) : (
+            {item.type !== 'text' ? (() => {
+              const content = (
+                <>
+                  <img 
+                    src={(() => {
+                      const url = item.mediaUrl || item.src;
+                      if (!url) return '';
+                      if (url.startsWith('http')) return url;
+                      return `${import.meta.env.VITE_API_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+                    })()}
+                    alt={item.alt || item.title}
+                    className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"
+                  />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-300 flex flex-col justify-end p-4">
+                    <motion.button 
+                      initial={{ opacity: 0, y: 10 }}
+                      whileHover={{ scale: 1.05 }}
+                      className="opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition-all duration-300 bg-white text-brand-text px-6 py-3 rounded-sm font-bold text-[10px] tracking-widest uppercase self-center mb-4 border border-black/5"
+                    >
+                      {item.link_fabric_code ? 'View Fabric \u2192' : 'View Collection \u2192'}
+                    </motion.button>
+                  </div>
+                </>
+              );
+
+              if (item.link_collection_id) {
+                const linkTo = item.link_fabric_code 
+                  ? `/collections/${item.link_collection_slug}?fabric=${item.link_fabric_code}`
+                  : `/collections/${item.link_collection_slug}`;
+                return (
+                  <Link to={linkTo} className="block w-full h-full">
+                    {content}
+                  </Link>
+                );
+              }
+
+              return content;
+            })() : (
               <div className={`w-full h-full p-6 md:p-8 flex flex-col justify-center text-left ${spanClass.includes('bg-[#a39a95]') ? 'bg-[#a39a95] text-white' : 'bg-brand-alt border border-black/5'}`}>
                 <h3 className={`font-serif text-lg md:text-xl leading-snug mb-4 ${spanClass.includes('bg-[#a39a95]') ? 'text-white' : 'text-brand-text'}`}>
                   {item.title} <br className="hidden md:block"/> <span className="font-light">{item.subtitle}</span>

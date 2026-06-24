@@ -1,15 +1,19 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { motion, useInView } from 'motion/react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface TextileCard {
   image: string;
+  mediaUrl?: string;
   name?: string;
   title?: string;
   code?: string;
   text?: string;
   ctaText?: string;
   linkUrl?: string;
+  link_collection_id?: string;
+  link_collection_slug?: string;
   active?: boolean;
   order?: number;
 }
@@ -108,7 +112,13 @@ export default function HomeTextilesCarousel() {
           ref={scrollRef}
           className="flex gap-4 md:gap-6 overflow-x-auto hide-scrollbar snap-x snap-mandatory py-4"
         >
-          {cards.map((card, index) => (
+          {cards.map((card, index) => {
+            const hasLink = !!(card.link_collection_slug || card.linkUrl);
+            const linkProps = card.link_collection_slug 
+              ? { as: Link, to: `/collections/${card.link_collection_slug}` } 
+              : { as: 'a', href: card.linkUrl || '#' };
+            
+            return (
             <motion.div 
               key={index}
               initial={{ opacity: 0, x: 50 }}
@@ -135,12 +145,24 @@ export default function HomeTextilesCarousel() {
                 <h3 className="font-serif text-xl sm:text-2xl text-white mb-3 group-hover:text-brand-accent transition-colors">
                   {card.title || card.name}
                 </h3>
-                <a href={card.linkUrl || '#'} className="inline-flex items-center text-[10px] md:text-xs font-bold tracking-widest uppercase text-white border-b border-brand-accent pb-1 group-hover:text-brand-accent transition-colors">
-                  {card.ctaText || 'View Product'}
-                </a>
+                {hasLink ? (
+                  card.link_collection_slug ? (
+                    <Link to={`/collections/${card.link_collection_slug}`} className="inline-flex items-center text-[10px] md:text-xs font-bold tracking-widest uppercase text-white border-b border-brand-accent pb-1 group-hover:text-brand-accent transition-colors">
+                      {card.ctaText || 'View Product'}
+                    </Link>
+                  ) : (
+                    <a href={card.linkUrl || '#'} className="inline-flex items-center text-[10px] md:text-xs font-bold tracking-widest uppercase text-white border-b border-brand-accent pb-1 group-hover:text-brand-accent transition-colors">
+                      {card.ctaText || 'View Product'}
+                    </a>
+                  )
+                ) : (
+                  <span className="inline-flex items-center text-[10px] md:text-xs font-bold tracking-widest uppercase text-white/50 border-b border-white/20 pb-1">
+                    {card.ctaText || 'View Product'}
+                  </span>
+                )}
               </div>
             </motion.div>
-          ))}
+          )})}
         </div>
       </div>
     </section>

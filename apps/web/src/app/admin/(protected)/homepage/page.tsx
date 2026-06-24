@@ -68,10 +68,13 @@ export default function HomepageEditor() {
 
   useEffect(() => {
     loadData(activeTab);
-    if (activeTab === 'header' && collections.length === 0) {
+  }, [activeTab, loadData]);
+
+  useEffect(() => {
+    if (['header', 'masonry_grid', 'home_textiles_carousel'].includes(activeTab) && collections.length === 0) {
       loadCollections();
     }
-  }, [activeTab, loadData, loadCollections, collections.length]);
+  }, [activeTab, loadCollections, collections.length]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -196,6 +199,7 @@ export default function HomepageEditor() {
                 onChange={setMasonryData} 
                 onUpload={handleFileUpload} 
                 generateId={generateId} 
+                collections={collections}
               />
             )}
             {activeTab === 'home_textiles_carousel' && (
@@ -204,6 +208,7 @@ export default function HomepageEditor() {
                 onChange={setCarouselData} 
                 onUpload={handleFileUpload} 
                 generateId={generateId} 
+                collections={collections}
               />
             )}
           </>
@@ -546,7 +551,95 @@ function StatsEditor({ data, onChange, generateId }: any) {
   );
 }
 
-function MasonryEditor({ data, onChange, onUpload, generateId }: any) {
+function MasonryItemSettings({ item, updateItem, collections }: { item: any; updateItem: (id: string, updates: any) => void; collections: any[] }) {
+  const [fabrics, setFabrics] = useState<any[]>([]);
+  const [loadingFabrics, setLoadingFabrics] = useState(false);
+
+  useEffect(() => {
+    if (item.link_collection_id) {
+      setLoadingFabrics(true);
+      fetchApi<{ fabrics: any[] }>(`/api/collections/${item.link_collection_id}/fabrics`, { requireAuth: true })
+        .then(res => {
+          if (res.fabrics) setFabrics(res.fabrics);
+        })
+        .catch(err => console.error(err))
+        .finally(() => setLoadingFabrics(false));
+    } else {
+      setFabrics([]);
+    }
+  }, [item.link_collection_id]);
+
+  return (
+    <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-slate-100">
+      <div className="w-full space-y-1">
+        <Label className="text-xs text-muted-foreground">Link Collection (optional)</Label>
+        <select
+          className="w-full h-8 rounded-md border border-input bg-background px-3 py-1 text-sm focus:ring-2 focus:ring-slate-900"
+          value={item.link_collection_id || ''}
+          onChange={e => {
+            const val = e.target.value;
+            const selected = collections?.find((c: any) => c.id === val);
+            if (selected) {
+              updateItem(item.id, {
+                link_collection_id: selected.id,
+                link_collection_slug: selected.slug,
+                link_fabric_id: null,
+                link_fabric_code: null
+              });
+            } else {
+              updateItem(item.id, {
+                link_collection_id: null,
+                link_collection_slug: null,
+                link_fabric_id: null,
+                link_fabric_code: null
+              });
+            }
+          }}
+        >
+          <option value="">No link</option>
+          {collections?.map((c: any) => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
+      </div>
+
+      {item.link_collection_id && (
+        <div className="w-full space-y-1">
+          <Label className="text-xs text-muted-foreground">
+            Link Fabric (optional) {loadingFabrics && <span className="animate-pulse">...</span>}
+          </Label>
+          <select
+            className="w-full h-8 rounded-md border border-input bg-background px-3 py-1 text-sm focus:ring-2 focus:ring-slate-900"
+            value={item.link_fabric_id || ''}
+            disabled={loadingFabrics}
+            onChange={e => {
+              const val = e.target.value;
+              const selected = fabrics?.find((f: any) => f.id === val);
+              if (selected) {
+                updateItem(item.id, {
+                  link_fabric_id: selected.id,
+                  link_fabric_code: selected.code || selected.fabric_code
+                });
+              } else {
+                updateItem(item.id, {
+                  link_fabric_id: null,
+                  link_fabric_code: null
+                });
+              }
+            }}
+          >
+            <option value="">No fabric (go to collection)</option>
+            {fabrics?.map((f: any) => (
+              <option key={f.id} value={f.id}>{f.name} ({f.code || f.fabric_code})</option>
+            ))}
+          </select>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MasonryEditor({ data, onChange, onUpload, generateId, collections }: any) {
   const addItem = () => {
     onChange({
       ...data,
@@ -632,7 +725,10 @@ function MasonryEditor({ data, onChange, onUpload, generateId }: any) {
                     <Input placeholder="Subtitle" value={item.subtitle || ''} onChange={e => updateItem(item.id, { subtitle: e.target.value })} />
                   </>
                 ) : (
-                  <Input placeholder="Alt Text" value={item.alt || ''} onChange={e => updateItem(item.id, { alt: e.target.value })} />
+                  <>
+                    <Input placeholder="Alt Text" value={item.alt || ''} onChange={e => updateItem(item.id, { alt: e.target.value })} />
+                    <MasonryItemSettings item={item} updateItem={updateItem} collections={collections} />
+                  </>
                 )}
               </div>
               <Button variant="ghost" size="icon" className="text-red-500 mt-1 shrink-0" onClick={() => removeItem(item.id)}>
@@ -647,11 +743,11 @@ function MasonryEditor({ data, onChange, onUpload, generateId }: any) {
   );
 }
 
-function CarouselEditor({ data, onChange, onUpload, generateId }: any) {
+function CarouselEditor({ data, onChange, onUpload, generateId, collections }: any) {
   const addCard = () => {
     onChange({
       ...data,
-      cards: [...(data.cards || []), { id: generateId(), mediaUrl: '', title: '', text: '', ctaText: '', linkUrl: '' }]
+      cards: [...(data.cards || []), { id: generateId(), mediaUrl: '', title: '', text: '', ctaText: '', linkUrl: '', link_collection_id: null, link_collection_slug: null }]
     });
   };
 
@@ -708,7 +804,41 @@ function CarouselEditor({ data, onChange, onUpload, generateId }: any) {
                   <Input placeholder="Text / Code" value={item.text} onChange={e => updateCard(item.id, { text: e.target.value })} />
                   <div className="flex gap-2">
                     <Input placeholder="CTA Text" value={item.ctaText} onChange={e => updateCard(item.id, { ctaText: e.target.value })} />
-                    <Input placeholder="Link URL" value={item.linkUrl} onChange={e => updateCard(item.id, { linkUrl: e.target.value })} />
+                    <div className="w-full space-y-1">
+                      <select
+                        className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-slate-900"
+                        value={item.link_collection_id || item.linkUrl || ''}
+                        onChange={e => {
+                          const val = e.target.value;
+                          const selected = collections?.find((c: any) => c.id === val);
+                          if (selected) {
+                            updateCard(item.id, { 
+                              link_collection_id: selected.id, 
+                              link_collection_slug: selected.slug,
+                              linkUrl: '' // clear legacy link
+                            });
+                          } else {
+                            // If they pick "No link" or a raw URL
+                            updateCard(item.id, { 
+                              link_collection_id: null, 
+                              link_collection_slug: null,
+                              linkUrl: val === '' ? '' : val
+                            });
+                          }
+                        }}
+                      >
+                        <option value="">No link / Select collection</option>
+                        {item.linkUrl && !collections?.find((c: any) => c.id === item.linkUrl) && (
+                           <option value={item.linkUrl}>{item.linkUrl} (Legacy URL)</option>
+                        )}
+                        {collections?.map((c: any) => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                      {item.link_collection_slug && (
+                        <p className="text-xs text-muted-foreground">→ Will link to /collections/{item.link_collection_slug}</p>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <Button variant="ghost" size="icon" className="text-red-500 mt-1 shrink-0" onClick={() => removeCard(item.id)}>

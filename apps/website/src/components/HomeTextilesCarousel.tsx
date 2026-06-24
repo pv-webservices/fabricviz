@@ -1,3 +1,4 @@
+// CANONICAL COLLECTION ROUTE: /collections/:id  (id = collection.id from API)
 import React, { useRef, useState, useEffect } from 'react';
 import { motion, useInView } from 'motion/react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -113,10 +114,7 @@ export default function HomeTextilesCarousel() {
           className="flex gap-4 md:gap-6 overflow-x-auto hide-scrollbar snap-x snap-mandatory py-4"
         >
           {cards.map((card, index) => {
-            const hasLink = !!(card.link_collection_slug || card.linkUrl);
-            const linkProps = card.link_collection_slug 
-              ? { as: Link, to: `/collections/${card.link_collection_slug}` } 
-              : { as: 'a', href: card.linkUrl || '#' };
+            const hasLink = !!(card.link_collection_id || card.linkUrl);
             
             return (
             <motion.div 
@@ -146,8 +144,8 @@ export default function HomeTextilesCarousel() {
                   {card.title || card.name}
                 </h3>
                 {hasLink ? (
-                  card.link_collection_slug ? (
-                    <Link to={`/collections/${card.link_collection_slug}`} className="inline-flex items-center text-[10px] md:text-xs font-bold tracking-widest uppercase text-white border-b border-brand-accent pb-1 group-hover:text-brand-accent transition-colors">
+                  card.link_collection_id ? (
+                    <Link to={`/collections/${card.link_collection_id}`} className="inline-flex items-center text-[10px] md:text-xs font-bold tracking-widest uppercase text-white border-b border-brand-accent pb-1 group-hover:text-brand-accent transition-colors">
                       {card.ctaText || 'View Product'}
                     </Link>
                   ) : (

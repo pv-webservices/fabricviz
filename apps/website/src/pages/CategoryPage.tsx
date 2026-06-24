@@ -1,3 +1,4 @@
+// CANONICAL COLLECTION ROUTE: /collections/:id  (id = collection.id from API)
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 
@@ -63,7 +64,7 @@ export default function CategoryPage({ endUse: endUseProp }: CategoryPageProps) 
             {collections.map(collection => (
               <Link 
                 key={collection.id} 
-                to={`/catalog/${collection.id}`}
+                to={`/collections/${collection.id}`}
                 className="group rounded-xl overflow-hidden bg-brand-alt/5 border border-white/5 hover:border-brand-accent transition-colors block"
               >
                 <div className="aspect-square relative overflow-hidden bg-brand-dark/50">

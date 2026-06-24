@@ -1,3 +1,4 @@
+// CANONICAL COLLECTION ROUTE: /collections/:id  (id = collection.id from API)
 import React, { useRef } from 'react';
 import { motion, useInView } from 'motion/react';
 import { Link } from 'react-router-dom';
@@ -121,18 +122,16 @@ export default function MasonryGrid() {
                       whileHover={{ scale: 1.05 }}
                       className="opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition-all duration-300 bg-white text-brand-text px-6 py-3 rounded-sm font-bold text-[10px] tracking-widest uppercase self-center mb-4 border border-black/5"
                     >
-                      {item.link_fabric_code ? 'View Fabric \u2192' : 'View Collection \u2192'}
+                      View Collection &rarr;
                     </motion.button>
                   </div>
                 </>
               );
 
               if (item.link_collection_id) {
-                const linkTo = item.link_fabric_code 
-                  ? `/collections/${item.link_collection_slug}?fabric=${item.link_fabric_code}`
-                  : `/collections/${item.link_collection_slug}`;
+                const linkTo = `/collections/${item.link_collection_id}`;
                 return (
-                  <Link to={linkTo} className="block w-full h-full">
+                  <Link to={linkTo} className="block w-full h-full cursor-pointer">
                     {content}
                   </Link>
                 );

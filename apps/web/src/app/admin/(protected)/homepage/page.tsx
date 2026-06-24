@@ -551,24 +551,8 @@ function StatsEditor({ data, onChange, generateId }: any) {
   );
 }
 
+// CANONICAL COLLECTION ROUTE: /collections/:id (id = collection.id from API)
 function MasonryItemSettings({ item, updateItem, collections }: { item: any; updateItem: (id: string, updates: any) => void; collections: any[] }) {
-  const [fabrics, setFabrics] = useState<any[]>([]);
-  const [loadingFabrics, setLoadingFabrics] = useState(false);
-
-  useEffect(() => {
-    if (item.link_collection_id) {
-      setLoadingFabrics(true);
-      fetchApi<{ fabrics: any[] }>(`/api/collections/${item.link_collection_id}/fabrics`, { requireAuth: true })
-        .then(res => {
-          if (res.fabrics) setFabrics(res.fabrics);
-        })
-        .catch(err => console.error(err))
-        .finally(() => setLoadingFabrics(false));
-    } else {
-      setFabrics([]);
-    }
-  }, [item.link_collection_id]);
-
   return (
     <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-slate-100">
       <div className="w-full space-y-1">
@@ -583,6 +567,7 @@ function MasonryItemSettings({ item, updateItem, collections }: { item: any; upd
               updateItem(item.id, {
                 link_collection_id: selected.id,
                 link_collection_slug: selected.slug,
+                // Keep backward compatibility, don't delete them from old items, just nullify them
                 link_fabric_id: null,
                 link_fabric_code: null
               });
@@ -602,39 +587,6 @@ function MasonryItemSettings({ item, updateItem, collections }: { item: any; upd
           ))}
         </select>
       </div>
-
-      {item.link_collection_id && (
-        <div className="w-full space-y-1">
-          <Label className="text-xs text-muted-foreground">
-            Link Fabric (optional) {loadingFabrics && <span className="animate-pulse">...</span>}
-          </Label>
-          <select
-            className="w-full h-8 rounded-md border border-input bg-background px-3 py-1 text-sm focus:ring-2 focus:ring-slate-900"
-            value={item.link_fabric_id || ''}
-            disabled={loadingFabrics}
-            onChange={e => {
-              const val = e.target.value;
-              const selected = fabrics?.find((f: any) => f.id === val);
-              if (selected) {
-                updateItem(item.id, {
-                  link_fabric_id: selected.id,
-                  link_fabric_code: selected.code || selected.fabric_code
-                });
-              } else {
-                updateItem(item.id, {
-                  link_fabric_id: null,
-                  link_fabric_code: null
-                });
-              }
-            }}
-          >
-            <option value="">No fabric (go to collection)</option>
-            {fabrics?.map((f: any) => (
-              <option key={f.id} value={f.id}>{f.name} ({f.code || f.fabric_code})</option>
-            ))}
-          </select>
-        </div>
-      )}
     </div>
   );
 }

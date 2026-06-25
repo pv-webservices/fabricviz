@@ -21,6 +21,15 @@ const MENU_ITEMS_FALLBACK: MenuItem[] = [
   { name: 'CONTACT', href: '/contact' }
 ];
 
+const getLinkHref = (name: string, fallback: string) => {
+  const upper = name.toUpperCase();
+  if (upper === 'HOME') return '/';
+  if (upper === 'CONTACT') return '/#contact';
+  if (upper === 'SOFA') return '/sofa';
+  if (upper === 'CURTAIN') return '/curtain';
+  return fallback || '/';
+};
+
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -86,7 +95,7 @@ export default function Navbar() {
               {headerData.logo_url ? (
                 <img src={headerData.logo_url} alt="Logo" className="h-full w-auto object-contain" />
               ) : (
-                <span className="font-serif text-xl sm:text-2xl lg:text-3xl font-semibold tracking-tighter">FABRICVIZ</span>
+                <span className="font-serif text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tighter">FABRICVIZ</span>
               )}
             </a>
           </div>
@@ -96,7 +105,13 @@ export default function Navbar() {
             {headerData.menu_items.map((menu) => (
               <li key={menu.name} className="relative group/navitem">
                 <Link 
-                  to={menu.name.toUpperCase() === 'SOFA' ? '/sofa' : menu.name.toUpperCase() === 'CURTAIN' ? '/curtain' : (menu.href || '/')}
+                  to={getLinkHref(menu.name, menu.href)}
+                  onClick={(e) => {
+                    if (menu.name.toUpperCase() === 'CONTACT' && window.location.pathname === '/') {
+                      e.preventDefault();
+                      document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }}
                   className={`transition-colors flex items-center gap-1 hover:text-brand-accent ${!isDarkText ? 'text-white/90 group-hover:text-brand-text' : 'text-brand-text'}`}
                 >
                   {menu.name}
@@ -110,7 +125,7 @@ export default function Navbar() {
                   <div className="absolute top-full left-1/2 -translate-x-1/2 mt-0 pt-4 opacity-0 invisible group-hover/navitem:opacity-100 group-hover/navitem:visible min-w-[200px] z-[60]">
                     <div className="bg-white shadow-xl border border-black/5 rounded-sm p-2 flex flex-col gap-1">
                       <Link 
-                        to={menu.name.toUpperCase() === 'SOFA' ? '/sofa' : menu.name.toUpperCase() === 'CURTAIN' ? '/curtain' : menu.href} 
+                        to={getLinkHref(menu.name, menu.href)}
                         className="px-4 py-3 bg-[#f5c73c] text-slate-900 font-semibold hover:bg-[#eab308] transition-colors block whitespace-nowrap rounded-t-sm"
                       >
                         View all {menu.name}
@@ -159,15 +174,27 @@ export default function Navbar() {
             <ul className="flex flex-col gap-6 text-lg py-6">
               {headerData.menu_items.map(menu => (
                 <li key={menu.name} className="border-b border-black/5 pb-4">
-                  <Link to={menu.href} className="font-semibold text-brand-text tracking-wider hover:text-brand-accent block w-full">{menu.name}</Link>
+                  <Link 
+                    to={getLinkHref(menu.name, menu.href)} 
+                    onClick={(e) => {
+                      if (menu.name.toUpperCase() === 'CONTACT' && window.location.pathname === '/') {
+                        e.preventDefault();
+                        document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
+                      }
+                      setMobileMenuOpen(false);
+                    }}
+                    className="font-semibold text-brand-text tracking-wider hover:text-brand-accent block w-full"
+                  >
+                    {menu.name}
+                  </Link>
                   {menu.submenu && menu.submenu.length > 0 && (
                     <ul className="mt-3 pl-4 flex flex-col gap-3 border-l-2 border-brand-accent/20">
                       <li>
-                        <Link to={menu.href} className="text-base text-brand-terracotta font-semibold hover:text-brand-accent block">View all {menu.name}</Link>
+                        <Link to={getLinkHref(menu.name, menu.href)} onClick={() => setMobileMenuOpen(false)} className="text-base text-brand-terracotta font-semibold hover:text-brand-accent block">View all {menu.name}</Link>
                       </li>
                       {menu.submenu.map(sub => (
                         <li key={sub.name}>
-                          <Link to={sub.href} className="text-base text-brand-muted hover:text-brand-accent block">{sub.name}</Link>
+                          <Link to={sub.href} onClick={() => setMobileMenuOpen(false)} className="text-base text-brand-muted hover:text-brand-accent block">{sub.name}</Link>
                         </li>
                       ))}
                     </ul>

@@ -15,7 +15,7 @@ export default function Contact() {
   }
 
   return (
-    <section className="bg-brand-bg py-16 md:py-24 pb-24 md:pb-32" ref={ref}>
+    <section id="contact" className="bg-brand-bg py-16 md:py-24 pb-24 md:pb-32" ref={ref}>
       <div className="max-w-[1200px] mx-auto px-4 md:px-8 flex flex-col lg:flex-row gap-12 lg:gap-24">
         
         {/* Left Side */}

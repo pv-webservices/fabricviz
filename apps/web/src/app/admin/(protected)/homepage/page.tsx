@@ -17,7 +17,8 @@ const TABS = [
   { id: 'stats_bar', label: 'Stats Bar' },
   { id: 'masonry_grid', label: 'Masonry Grid' },
   { id: 'home_textiles_carousel', label: 'Textiles Carousel' },
-  { id: 'visualizer_section', label: 'Visualizer Section' }
+  { id: 'visualizer_section', label: 'Visualizer Section' },
+  { id: 'new_arrivals', label: 'New Arrivals' }
 ];
 
 const getImageUrl = (url: string) => {
@@ -40,6 +41,7 @@ export default function HomepageEditor() {
   const [masonryData, setMasonryData] = useState<any>({ tagLabel: '', sectionTitle: '', subheading: '', items: [] });
   const [carouselData, setCarouselData] = useState<any>({ tagLabel: '', sectionTitle: '', subtitle: '', cards: [] });
   const [visualizerData, setVisualizerData] = useState<any>({ media_type: 'image', image_url: null, video_url: null, fallback_image_url: null, tag_label: 'VISUALIZE YOUR SPACE', heading_line1: 'See Your Fabric', heading_line2: 'Before You Buy.', body: 'Upload a room photo, choose your fabric, and instantly see how it looks in your space — before ordering a single metre.', bullets: ['Upload your room photo', 'Browse and select any fabric', 'See it visualized in real-time', 'Save and share your favorites'], cta_text: 'LAUNCH THE VISUALIZER →', cta_link: '', secondary_link_text: '', secondary_link_url: '' });
+  const [newArrivalsData, setNewArrivalsData] = useState<any>({ tag_label: 'NEW ARRIVALS', section_title: 'Explore Fresh Fabrics', subheading: 'A curated edit of the newest fabrics across our collections.', cta_text: 'VIEW ALL COLLECTIONS →', cta_collection_id: '', cta_collection_slug: '', selected_fabric_ids: [], fabrics: [] });
   const [collections, setCollections] = useState<any[]>([]);
 
   const loadCollections = useCallback(async () => {
@@ -65,6 +67,7 @@ export default function HomepageEditor() {
         const defaultVis = { media_type: 'image', image_url: null, video_url: null, fallback_image_url: null, tag_label: 'VISUALIZE YOUR SPACE', heading_line1: 'See Your Fabric', heading_line2: 'Before You Buy.', body: 'Upload a room photo, choose your fabric, and instantly see how it looks in your space — before ordering a single metre.', bullets: ['Upload your room photo', 'Browse and select any fabric', 'See it visualized in real-time', 'Save and share your favorites'], cta_text: 'LAUNCH THE VISUALIZER →', cta_link: '', secondary_link_text: '', secondary_link_url: '' };
         setVisualizerData(data || defaultVis);
       }
+      if (section === 'new_arrivals') setNewArrivalsData(data || { tag_label: 'NEW ARRIVALS', section_title: 'Explore Fresh Fabrics', subheading: 'A curated edit of the newest fabrics across our collections.', cta_text: 'VIEW ALL COLLECTIONS →', cta_collection_id: '', cta_collection_slug: '', selected_fabric_ids: [], fabrics: [] });
     } catch (err) {
       console.error(`Failed to load ${section}`, err);
     } finally {
@@ -77,7 +80,7 @@ export default function HomepageEditor() {
   }, [activeTab, loadData]);
 
   useEffect(() => {
-    if (['header', 'masonry_grid', 'home_textiles_carousel'].includes(activeTab) && collections.length === 0) {
+    if (['header', 'masonry_grid', 'home_textiles_carousel', 'new_arrivals'].includes(activeTab) && collections.length === 0) {
       loadCollections();
     }
   }, [activeTab, loadCollections, collections.length]);
@@ -93,6 +96,10 @@ export default function HomepageEditor() {
       if (activeTab === 'masonry_grid') payload = masonryData;
       if (activeTab === 'home_textiles_carousel') payload = carouselData;
       if (activeTab === 'visualizer_section') payload = visualizerData;
+      if (activeTab === 'new_arrivals') {
+        payload = { ...newArrivalsData };
+        delete payload.fabrics; // Do not persist resolved fabrics back to db
+      }
 
       await fetchApi(`/api/homepage/${activeTab}`, {
         method: 'PUT',
@@ -223,6 +230,13 @@ export default function HomepageEditor() {
                 data={visualizerData} 
                 onChange={setVisualizerData} 
                 onUpload={handleFileUpload}
+              />
+            )}
+            {activeTab === 'new_arrivals' && (
+              <NewArrivalsEditor 
+                data={newArrivalsData} 
+                onChange={setNewArrivalsData} 
+                collections={collections}
               />
             )}
           </>
@@ -940,6 +954,196 @@ function VisualizerEditor({ data, onChange, onUpload }: any) {
             <Label>Secondary Link URL</Label>
             <Input placeholder="/contact" value={data.secondary_link_url || ''} onChange={e => onChange({ ...data, secondary_link_url: e.target.value })} />
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NewArrivalsEditor({ data, onChange, collections }: any) {
+  const [selectedCollection, setSelectedCollection] = useState<string>('');
+  const [fabrics, setFabrics] = useState<any[]>([]);
+  const [loadingFabrics, setLoadingFabrics] = useState(false);
+
+  useEffect(() => {
+    if (!selectedCollection) {
+      setFabrics([]);
+      return;
+    }
+    const fetchFabrics = async () => {
+      setLoadingFabrics(true);
+      try {
+        const res = await fetchApi<{items: any[]}>(`/api/fabrics?collectionId=${selectedCollection}&limit=100`, { requireAuth: true });
+        setFabrics(res.items || []);
+      } catch (err) {
+        console.error('Failed to load fabrics', err);
+      } finally {
+        setLoadingFabrics(false);
+      }
+    };
+    fetchFabrics();
+  }, [selectedCollection]);
+
+  const toggleFabric = (fabric: any) => {
+    const selectedIds = data.selected_fabric_ids || [];
+    const isSelected = selectedIds.includes(fabric.id);
+    
+    if (isSelected) {
+      onChange({
+        ...data,
+        selected_fabric_ids: selectedIds.filter((id: string) => id !== fabric.id),
+        fabrics: (data.fabrics || []).filter((f: any) => f.id !== fabric.id)
+      });
+    } else {
+      if (selectedIds.length >= 8) return;
+      onChange({
+        ...data,
+        selected_fabric_ids: [...selectedIds, fabric.id],
+        fabrics: [...(data.fabrics || []), fabric]
+      });
+    }
+  };
+
+  const removeFabric = (id: string) => {
+    onChange({
+      ...data,
+      selected_fabric_ids: (data.selected_fabric_ids || []).filter((item: string) => item !== id),
+      fabrics: (data.fabrics || []).filter((f: any) => f.id !== id)
+    });
+  };
+
+  const onReorder = (newItems: any[]) => {
+    onChange({
+      ...data,
+      selected_fabric_ids: newItems.map((f: any) => f.id),
+      fabrics: newItems
+    });
+  };
+
+  return (
+    <div className="space-y-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-4 rounded border">
+        <div className="space-y-2">
+          <Label>Tag Label</Label>
+          <Input placeholder="e.g. NEW ARRIVALS" value={data.tag_label || ''} onChange={e => onChange({ ...data, tag_label: e.target.value })} />
+        </div>
+        <div className="space-y-2">
+          <Label>Section Title</Label>
+          <Input placeholder="e.g. Explore Fresh Fabrics" value={data.section_title || ''} onChange={e => onChange({ ...data, section_title: e.target.value })} />
+        </div>
+        <div className="space-y-2">
+          <Label>Subheading</Label>
+          <Input placeholder="e.g. A curated edit of the newest fabrics..." value={data.subheading || ''} onChange={e => onChange({ ...data, subheading: e.target.value })} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="space-y-4 border p-4 rounded bg-white">
+          <h3 className="font-semibold text-lg border-b pb-2">1. Select Collection</h3>
+          <select 
+            className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-slate-900"
+            value={selectedCollection}
+            onChange={(e) => setSelectedCollection(e.target.value)}
+          >
+            <option value="">-- Choose a collection --</option>
+            {collections?.map((c: any) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+
+          {loadingFabrics && <p className="text-sm text-slate-500">Loading fabrics...</p>}
+          
+          {!loadingFabrics && fabrics.length > 0 && (
+            <div className="space-y-2 mt-4 max-h-96 overflow-y-auto pr-2">
+              <h4 className="text-sm font-medium text-slate-700">2. Choose Fabrics (Max 8)</h4>
+              {fabrics.map(f => {
+                const isSelected = (data.selected_fabric_ids || []).includes(f.id);
+                const isMaxReached = (data.selected_fabric_ids || []).length >= 8;
+                const isDisabled = !isSelected && isMaxReached;
+                
+                return (
+                  <label key={f.id} className={`flex items-center gap-3 p-2 border rounded cursor-pointer ${isDisabled ? 'opacity-50 cursor-not-allowed bg-slate-50' : 'hover:bg-slate-50'} ${isSelected ? 'border-slate-800 bg-slate-50' : ''}`}>
+                    <input 
+                      type="checkbox" 
+                      className="rounded border-slate-300 text-slate-900 focus:ring-slate-900"
+                      checked={isSelected}
+                      disabled={isDisabled}
+                      onChange={() => toggleFabric(f)}
+                    />
+                    <div className="flex-1 flex items-center gap-3">
+                      <div className="w-10 h-10 bg-slate-200 rounded overflow-hidden flex-shrink-0">
+                        {(f.swatch_url || f.texture_url) && <img src={getImageUrl(f.swatch_url || f.texture_url)} className="w-full h-full object-cover" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{f.name}</p>
+                        <p className="text-xs text-slate-500">{f.code} • {f.quality || 'Standard'}</p>
+                      </div>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-4 border p-4 rounded bg-white">
+          <div className="flex items-center justify-between border-b pb-2">
+            <h3 className="font-semibold text-lg">3. Selected Fabrics</h3>
+            <span className="text-sm font-medium bg-slate-100 px-2 py-1 rounded">
+              {(data.selected_fabric_ids || []).length} / 8 Selected
+            </span>
+          </div>
+
+          {(!data.fabrics || data.fabrics.length === 0) ? (
+            <p className="text-sm text-slate-500 italic py-4 text-center">No fabrics selected yet.</p>
+          ) : (
+            <SortableList
+              items={data.fabrics || []}
+              onReorder={onReorder}
+              renderItem={(item: any) => (
+                <div className="flex items-center gap-3 w-full bg-slate-50 p-2 rounded border">
+                  <div className="w-12 h-12 bg-slate-200 rounded overflow-hidden flex-shrink-0">
+                    {(item.swatch_url || item.texture_url) && <img src={getImageUrl(item.swatch_url || item.texture_url)} className="w-full h-full object-cover" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{item.name}</p>
+                    <p className="text-xs text-slate-500">{item.code} • {item.quality || 'Standard'}</p>
+                  </div>
+                  <Button variant="ghost" size="icon" className="text-red-500 flex-shrink-0" onClick={() => removeFabric(item.id)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            />
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-4 rounded border">
+        <div className="space-y-2">
+          <Label>CTA Button Text</Label>
+          <Input placeholder="e.g. VIEW ALL COLLECTIONS →" value={data.cta_text || ''} onChange={e => onChange({ ...data, cta_text: e.target.value })} />
+        </div>
+        <div className="space-y-2">
+          <Label>Link Collection</Label>
+          <select 
+            className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-slate-900"
+            value={data.cta_collection_id || ''}
+            onChange={(e) => {
+              const val = e.target.value;
+              const selected = collections?.find((c: any) => c.id === val);
+              if (selected) {
+                onChange({ ...data, cta_collection_id: selected.id, cta_collection_slug: selected.slug });
+              } else {
+                onChange({ ...data, cta_collection_id: '', cta_collection_slug: '' });
+              }
+            }}
+          >
+            <option value="">-- No CTA --</option>
+            {collections?.map((c: any) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
         </div>
       </div>
     </div>

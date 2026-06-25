@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Image as ImageIcon } from 'lucide-react';
 
 const DEFAULT_DATA = {
   media_type: 'image',
@@ -51,9 +52,12 @@ export default function VisualizerSection() {
 
   if (loading) {
     return (
-      <section className="bg-brand-alt py-16 md:py-24">
-        <div className="max-w-[1440px] mx-auto px-4 md:px-8 flex flex-col md:flex-row items-center gap-12 md:gap-16">
-          <div className="w-full md:w-1/2 aspect-[3/4] max-w-[300px] bg-slate-200 rounded-[2.5rem] animate-pulse" />
+      <section className="relative bg-white py-16 md:py-24">
+        <div className="absolute top-0 left-0 w-full h-[500px] md:h-full md:w-1/2 bg-brand-alt z-0" />
+        <div className="relative z-10 max-w-[1440px] mx-auto px-4 md:px-8 flex flex-col md:flex-row items-center gap-12 md:gap-16">
+          <div className="w-full md:w-1/2 flex justify-center">
+            <div className="w-[230px] aspect-[9/16] bg-slate-200 rounded-[2.5rem] animate-pulse" />
+          </div>
           <div className="w-full md:w-1/2 space-y-6">
             <div className="h-4 bg-slate-200 w-32 rounded animate-pulse" />
             <div className="h-10 bg-slate-200 w-3/4 rounded animate-pulse" />
@@ -69,11 +73,11 @@ export default function VisualizerSection() {
   const ctaUrl = content.cta_link || import.meta.env.VITE_APP_URL || '/login';
   
   return (
-    <section className="bg-white py-16 md:py-24 overflow-hidden relative">
-      {/* Desktop Split Background */}
-      <div className="absolute top-0 left-0 w-full md:w-1/2 h-1/2 md:h-full bg-[#F2EDE4] z-0" />
-      
-      <div className="max-w-[1440px] mx-auto px-4 md:px-8 flex flex-col md:flex-row items-center gap-12 md:gap-16 relative z-10">
+    <section className="relative bg-white overflow-hidden py-16 md:py-24">
+      {/* Background that spans full height on desktop, but only covers the phone frame area on mobile */}
+      <div className="absolute top-0 left-0 w-full h-[550px] md:h-full md:w-1/2 bg-brand-alt z-0" />
+
+      <div className="relative z-10 max-w-[1440px] mx-auto px-4 md:px-8 flex flex-col md:flex-row items-center gap-12 md:gap-16">
         
         {/* Left Panel: Media */}
         <div className="w-full md:w-1/2 flex items-center justify-center mb-8 md:mb-0 relative">
@@ -88,7 +92,7 @@ export default function VisualizerSection() {
             <div className="bg-[#111] rounded-[2.5rem] p-[10px] shadow-[0_8px_32px_rgba(0,0,0,0.18),0_2px_8px_rgba(0,0,0,0.10)] inline-block relative">
               
               {/* Screen Area */}
-              <div className="relative overflow-hidden bg-black rounded-[2rem] w-[230px] h-[380px] md:w-[275px] md:h-[450px] lg:w-[315px] lg:h-[520px]">
+              <div className="relative overflow-hidden bg-black rounded-[2rem] w-[230px] md:w-[273px] lg:w-[315px] aspect-[9/16]">
                 
                 {/* Notch */}
                 <div className="absolute top-3 left-1/2 -translate-x-1/2 w-[60px] h-[18px] bg-[#111] rounded-full z-10" />
@@ -152,11 +156,11 @@ export default function VisualizerSection() {
 
           {/* Bullets */}
           {content.bullets && content.bullets.length > 0 && (
-            <ul className="space-y-6 mb-10 max-w-xl">
+            <ul className="space-y-4 mb-10 max-w-xl">
               {content.bullets.map((bullet: string, idx: number) => (
-                <li key={idx} className="flex items-start gap-4 text-lg lg:text-xl">
-                  <span className="font-serif text-brand-accent italic min-w-[32px] text-xl lg:text-2xl mt-0.5">0{idx + 1}</span>
-                  <span className="font-sans text-brand-text leading-relaxed">{bullet}</span>
+                <li key={idx} className="flex items-start gap-4">
+                  <span className="font-serif text-brand-accent italic min-w-[28px] text-[1.1em] md:text-[1.2em] mt-0.5">0{idx + 1}</span>
+                  <span className="font-sans text-brand-text text-[1.1em] leading-relaxed">{bullet}</span>
                 </li>
               ))}
             </ul>

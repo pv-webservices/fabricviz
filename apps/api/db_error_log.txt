@@ -1,0 +1,5 @@
+error: column c.slug does not exist
+error: column c.slug does not exist
+    at F:\Project\fabricviz\node_modules\.pnpm\pg-pool@3.14.0_pg@8.21.0\node_modules\pg-pool\index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async Object.<anonymous> (F:\Project\fabricviz\apps\api\src\routes\homepage.ts:31:32)

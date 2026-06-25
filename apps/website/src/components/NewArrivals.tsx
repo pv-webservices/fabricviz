@@ -1,94 +1,175 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { motion, useInView } from 'motion/react';
+import { Link } from 'react-router-dom';
+import FabricZoomModal from './FabricZoomModal';
 
-const PRODUCTS = [
-  { name: 'Philus Shepherd', type: 'Jacquard', price: '₹ 845/m', rating: 4.8, image: 'https://images.unsplash.com/photo-1584598173971-b7bcc74b4815?q=80&w=600&auto=format&fit=crop' },
-  { name: 'Regal Fern', type: 'Velvet', price: '₹ 1,250/m', rating: 5.0, image: 'https://images.unsplash.com/photo-1540574163026-643ea20ade25?q=80&w=600&auto=format&fit=crop' },
-  { name: 'Radiance Blush', type: 'Sheer Silk', price: '₹ 680/m', rating: 4.5, image: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?q=80&w=600&auto=format&fit=crop' },
-  { name: 'Amber Weave', type: 'Linen Blend', price: '₹ 450/m', rating: 4.6, image: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?q=80&w=600&auto=format&fit=crop' },
-  { name: 'Midnight Oasis', type: 'Velvet', price: '₹ 1,100/m', rating: 4.9, image: 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?q=80&w=600&auto=format&fit=crop' },
-  { name: 'Sand Dune', type: 'Outdoor', price: '₹ 950/m', rating: 4.7, image: 'https://images.unsplash.com/photo-1595163901618-9c5957bcf875?q=80&w=600&auto=format&fit=crop' },
-  { name: 'Pearl Drop', type: 'Sheer', price: '₹ 380/m', rating: 4.4, image: 'https://images.unsplash.com/photo-1541123437800-1c0c05a10408?q=80&w=600&auto=format&fit=crop' },
-  { name: 'Terracotta Rust', type: 'Chenille', price: '₹ 720/m', rating: 4.8, image: 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?q=80&w=600&auto=format&fit=crop' },
-];
+const getImageUrl = (url: string | null) => {
+  if (!url) return '';
+  if (url.startsWith('http')) return url;
+  return `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}${url.startsWith('/') ? '' : '/'}${url}`;
+};
 
 export default function NewArrivals() {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-10%" });
+  
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedFabric, setSelectedFabric] = useState<any>(null);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/homepage/new_arrivals`);
+        if (!res.ok) throw new Error('Failed to fetch');
+        const json = await res.json();
+        setData(json.data || null);
+      } catch (err) {
+        console.error('Failed to load new arrivals data:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
+
+  if (loading) {
+    return (
+      <section className="bg-white py-16 md:py-24">
+        <div className="max-w-[1440px] mx-auto px-4 md:px-8">
+          <div className="text-center mb-10 md:mb-16 max-w-2xl mx-auto space-y-4">
+            <div className="h-4 bg-slate-200 w-32 mx-auto rounded animate-pulse" />
+            <div className="h-10 bg-slate-200 w-3/4 mx-auto rounded animate-pulse" />
+            <div className="h-6 bg-slate-200 w-full mx-auto rounded animate-pulse" />
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-3 sm:gap-x-6 gap-y-8 sm:gap-y-12">
+            {[1,2,3,4,5,6,7,8].map((i) => (
+              <div key={i} className="space-y-4">
+                <div className="aspect-square bg-slate-200 rounded-lg animate-pulse" />
+                <div className="h-6 bg-slate-200 w-3/4 mx-auto rounded animate-pulse" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (!data || !data.fabrics || data.fabrics.length === 0) {
+    return null; // Gracefully hide if no data or no fabrics
+  }
 
   return (
     <section className="bg-white py-16 md:py-24" ref={ref}>
       <div className="max-w-[1440px] mx-auto px-4 md:px-8">
         
         <div className="text-center mb-10 md:mb-16 max-w-2xl mx-auto">
-          <span className="text-brand-accent text-[10px] font-bold tracking-widest uppercase mb-2 block">Our Collection</span>
-          <motion.h2 
-            initial={{ opacity: 0, y: 20 }}
-            animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-            className="font-serif text-3xl sm:text-4xl md:text-5xl text-brand-text mb-3"
-          >
-            New Arrivals
-          </motion.h2>
-          <motion.p 
-            initial={{ opacity: 0, y: 20 }}
-            animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-            transition={{ delay: 0.1 }}
-            className="text-brand-muted font-light text-sm sm:text-base md:text-lg px-2"
-          >
-            Discover in-season prints, chic designs, and luxurious textures for your interior space.
-          </motion.p>
+          {data.tag_label && (
+            <span className="text-brand-accent text-[10px] font-bold tracking-widest uppercase mb-2 block">
+              {data.tag_label}
+            </span>
+          )}
+          {data.section_title && (
+            <motion.h2 
+              initial={{ opacity: 0, y: 20 }}
+              animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+              className="font-serif text-3xl sm:text-4xl md:text-5xl text-brand-text mb-3"
+            >
+              {data.section_title}
+            </motion.h2>
+          )}
+          {data.subheading && (
+            <motion.p 
+              initial={{ opacity: 0, y: 20 }}
+              animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+              transition={{ delay: 0.1 }}
+              className="text-brand-muted font-light text-sm sm:text-base md:text-lg px-2"
+            >
+              {data.subheading}
+            </motion.p>
+          )}
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-3 sm:gap-x-6 gap-y-8 sm:gap-y-12">
-          {PRODUCTS.map((prod, index) => (
+          {data.fabrics.slice(0, 8).map((fabric: any, index: number) => (
             <motion.div
-              key={index}
+              key={fabric.id || index}
               initial={{ opacity: 0, y: 30 }}
               animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
               transition={{ duration: 0.5, delay: index * 0.06 }}
               className="group cursor-pointer"
             >
               <div className="relative aspect-square rounded-lg overflow-hidden mb-3 sm:mb-5 bg-gray-100">
-                <img 
-                  src={prod.image} 
-                  alt={prod.name} 
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                />
+                {(fabric.swatch_url || fabric.texture_url) ? (
+                  <img 
+                    src={getImageUrl(fabric.swatch_url || fabric.texture_url)} 
+                    alt={fabric.name} 
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 bg-gray-50 text-sm">
+                    No Image
+                  </div>
+                )}
                 
                 {/* Hover Overlay */}
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 hidden md:flex flex-col items-center justify-center gap-3">
-                  <button className="bg-white text-brand-text w-3/4 py-3 text-[10px] font-bold tracking-widest uppercase hover:bg-brand-accent hover:text-white transition-colors">
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedFabric(fabric);
+                    }}
+                    className="bg-white text-brand-text w-3/4 py-3 text-[10px] font-bold tracking-widest uppercase hover:bg-brand-accent hover:text-white transition-colors"
+                  >
                     Quick View
-                  </button>
-                  <button className="border border-white text-white w-3/4 py-3 text-[10px] font-bold tracking-widest uppercase hover:bg-white hover:text-brand-text transition-colors">
-                    Add Sample
                   </button>
                 </div>
 
-                <div className="absolute top-2 left-2 sm:top-4 sm:left-4 bg-white/95 backdrop-blur text-[8px] sm:text-[10px] font-bold tracking-widest uppercase px-2 sm:px-3 py-1 text-brand-text rounded-sm shadow-sm md:block hidden group-hover:block">
-                  {prod.type}
-                </div>
+                {/* Mobile tap target for Quick View */}
+                <button
+                  className="md:hidden absolute inset-0 w-full h-full z-10"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedFabric(fabric);
+                  }}
+                  aria-label={`Quick view ${fabric.name}`}
+                />
+
+                {fabric.quality && (
+                  <div className="absolute top-2 left-2 sm:top-4 sm:left-4 bg-white/95 backdrop-blur text-[8px] sm:text-[10px] font-bold tracking-widest uppercase px-2 sm:px-3 py-1 text-brand-text rounded-sm shadow-sm md:block hidden group-hover:block">
+                    {fabric.quality}
+                  </div>
+                )}
               </div>
 
               <div className="text-center">
-                <div className="flex justify-center items-center gap-1 mb-1 sm:mb-2 text-brand-accent text-xs sm:text-sm">
-                  {'★'.repeat(Math.round(prod.rating))}
-                  <span className="text-gray-200">{'★'.repeat(5 - Math.round(prod.rating))}</span>
-                </div>
-                <h3 className="font-serif text-lg sm:text-xl text-brand-text mb-1 line-clamp-1">{prod.name}</h3>
-                <p className="text-brand-muted text-xs sm:text-sm">{prod.price}</p>
+                <h3 className="font-serif text-lg sm:text-xl text-brand-text mb-1 line-clamp-1">{fabric.name}</h3>
               </div>
             </motion.div>
           ))}
         </div>
 
-        <div className="mt-12 sm:mt-16 text-center">
-          <button className="border border-brand-text text-brand-text px-10 py-4 text-[10px] font-bold tracking-widest uppercase hover:bg-brand-text hover:text-white transition-colors">
-            Load More
-          </button>
-        </div>
+        {data.cta_collection_id && data.cta_text && (
+          <div className="mt-12 sm:mt-16 text-center">
+            {/* CANONICAL COLLECTION ROUTE: /collections/:slug or /collections/:id */}
+            <Link 
+              to={`/collections/${data.cta_collection_slug || data.cta_collection_id}`}
+              className="border border-brand-text text-brand-text px-10 py-4 text-[10px] font-bold tracking-widest uppercase hover:bg-brand-text hover:text-white transition-colors inline-block"
+            >
+              {data.cta_text}
+            </Link>
+          </div>
+        )}
 
       </div>
+
+      {selectedFabric && (
+        <FabricZoomModal 
+          fabric={selectedFabric}
+          collection={{ name: selectedFabric.collection_name, slug: selectedFabric.collection_slug }}
+          onClose={() => setSelectedFabric(null)}
+        />
+      )}
     </section>
   );
 }

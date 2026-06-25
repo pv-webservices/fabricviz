@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import ScrollToTop from './components/ScrollToTop';
 import Navbar from './components/Navbar';
 import Contact from './components/Contact';
 import Footer from './components/Footer';
@@ -10,6 +11,7 @@ import CatalogPage from './pages/CatalogPage';
 export default function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <div className="w-full min-h-screen bg-brand-bg text-brand-text font-sans">
         <Navbar />
         

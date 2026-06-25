@@ -33,9 +33,13 @@ export default function NewArrivals() {
     loadData();
   }, []);
 
-  if (loading) {
-    return (
-      <section className="bg-white py-16 md:py-24">
+  if (!loading && (!data || !data.fabrics || data.fabrics.length === 0)) {
+    return null; // Gracefully hide if no data or no fabrics
+  }
+
+  return (
+    <section className="bg-white py-16 md:py-24" ref={ref}>
+      {loading ? (
         <div className="max-w-[1440px] mx-auto px-4 md:px-8">
           <div className="text-center mb-10 md:mb-16 max-w-2xl mx-auto space-y-4">
             <div className="h-4 bg-slate-200 w-32 mx-auto rounded animate-pulse" />
@@ -51,17 +55,8 @@ export default function NewArrivals() {
             ))}
           </div>
         </div>
-      </section>
-    );
-  }
-
-  if (!data || !data.fabrics || data.fabrics.length === 0) {
-    return null; // Gracefully hide if no data or no fabrics
-  }
-
-  return (
-    <section className="bg-white py-16 md:py-24" ref={ref}>
-      <div className="max-w-[1440px] mx-auto px-4 md:px-8">
+      ) : (
+        <div className="max-w-[1440px] mx-auto px-4 md:px-8">
         
         <div className="text-center mb-10 md:mb-16 max-w-2xl mx-auto">
           {data.tag_label && (
@@ -162,6 +157,7 @@ export default function NewArrivals() {
         )}
 
       </div>
+      )}
 
       {selectedFabric && (
         <FabricZoomModal 

@@ -24,9 +24,10 @@ export default async function homepageRoutes(fastify: FastifyInstance) {
         try {
           const fabricIds = data.selected_fabric_ids;
           const fabricsRes = await fastify.db.query(
+            // ROOT CAUSE FIX: Removed c.slug and f.category which didn't exist in schema, causing silent SQL failure and empty fabrics array
             `SELECT f.id, f.name, f.swatch_url, f.texture_url, f.quality, 
-                    c.name as collection_name, c.slug as collection_slug, 
-                    f.code, f.category, f.color_family, f.end_use, f.tags
+                    c.name as collection_name, 
+                    f.code, f.color_family, f.end_use, f.tags
              FROM fabrics f
              LEFT JOIN collections c ON f.collection_id = c.id
              WHERE f.id = ANY($1)`,

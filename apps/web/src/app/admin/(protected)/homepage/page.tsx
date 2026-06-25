@@ -106,6 +106,11 @@ export default function HomepageEditor() {
         requireAuth: true,
         body: JSON.stringify(payload)
       });
+      
+      // ROOT CAUSE FIX: Rehydrate state from the backend truth immediately after successful save 
+      // This ensures any backend-resolved data (like fabrics) is correctly repopulated in the UI
+      await loadData(activeTab);
+      
       toast({ title: 'Success', description: 'Changes saved successfully' });
     } catch (err: any) {
       toast({ title: 'Error', description: err.message || 'Failed to save', variant: 'destructive' });

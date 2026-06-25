@@ -3,7 +3,7 @@ import Hero from '../components/Hero';
 import StatsBar from '../components/StatsBar';
 import MasonryGrid from '../components/MasonryGrid';
 import HomeTextilesCarousel from '../components/HomeTextilesCarousel';
-import FabricFinder from '../components/FabricFinder';
+import VisualizerSection from '../components/VisualizerSection';
 import NewArrivals from '../components/NewArrivals';
 import DesignerCurated from '../components/DesignerCurated';
 import USPBand from '../components/USPBand';
@@ -15,7 +15,7 @@ export default function HomePage() {
       <StatsBar />
       <MasonryGrid />
       <HomeTextilesCarousel />
-      <FabricFinder />
+      <VisualizerSection />
       <NewArrivals />
       <DesignerCurated />
       <USPBand />

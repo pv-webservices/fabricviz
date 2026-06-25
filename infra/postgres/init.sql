@@ -190,3 +190,28 @@ INSERT INTO app_settings (key, value) VALUES
 INSERT INTO users (email, password_hash, role, name) VALUES
   ('admin@fabricviz.com', '$2a$12$5dj0ofiFyyluz0Gs4hTQd.mSfOo7jjdYZqAXCv5Z5vmoMdxj2i.Re', 'super_admin', 'FabricViz Admin')
 ON CONFLICT (email) DO NOTHING;
+
+-- Default visualizer section seed
+INSERT INTO homepage_content (section_name, data) VALUES (
+  'visualizer_section',
+  '{
+    "media_type": "image",
+    "image_url": null,
+    "video_url": null,
+    "fallback_image_url": null,
+    "tag_label": "VISUALIZE YOUR SPACE",
+    "heading_line1": "See Your Fabric",
+    "heading_line2": "Before You Buy.",
+    "body": "Upload a room photo, choose your fabric, and instantly see how it looks in your space — before ordering a single metre.",
+    "bullets": [
+      "Upload your room photo",
+      "Browse and select any fabric",
+      "See it visualized in real-time",
+      "Save and share your favorites"
+    ],
+    "cta_text": "LAUNCH THE VISUALIZER →",
+    "cta_link": "",
+    "secondary_link_text": "",
+    "secondary_link_url": ""
+  }'
+) ON CONFLICT (section_name) DO NOTHING;

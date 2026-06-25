@@ -16,7 +16,8 @@ const TABS = [
   { id: 'running_bar', label: 'Running Bar' },
   { id: 'stats_bar', label: 'Stats Bar' },
   { id: 'masonry_grid', label: 'Masonry Grid' },
-  { id: 'home_textiles_carousel', label: 'Textiles Carousel' }
+  { id: 'home_textiles_carousel', label: 'Textiles Carousel' },
+  { id: 'visualizer_section', label: 'Visualizer Section' }
 ];
 
 const getImageUrl = (url: string) => {
@@ -38,6 +39,7 @@ export default function HomepageEditor() {
   const [statsData, setStatsData] = useState<any>({ stats: [] });
   const [masonryData, setMasonryData] = useState<any>({ tagLabel: '', sectionTitle: '', subheading: '', items: [] });
   const [carouselData, setCarouselData] = useState<any>({ tagLabel: '', sectionTitle: '', subtitle: '', cards: [] });
+  const [visualizerData, setVisualizerData] = useState<any>({ media_type: 'image', image_url: null, video_url: null, fallback_image_url: null, tag_label: 'VISUALIZE YOUR SPACE', heading_line1: 'See Your Fabric', heading_line2: 'Before You Buy.', body: 'Upload a room photo, choose your fabric, and instantly see how it looks in your space — before ordering a single metre.', bullets: ['Upload your room photo', 'Browse and select any fabric', 'See it visualized in real-time', 'Save and share your favorites'], cta_text: 'LAUNCH THE VISUALIZER →', cta_link: '', secondary_link_text: '', secondary_link_url: '' });
   const [collections, setCollections] = useState<any[]>([]);
 
   const loadCollections = useCallback(async () => {
@@ -59,6 +61,10 @@ export default function HomepageEditor() {
       if (section === 'stats_bar') setStatsData(data || { stats: [] });
       if (section === 'masonry_grid') setMasonryData(data || { tagLabel: '', sectionTitle: '', subheading: '', items: [] });
       if (section === 'home_textiles_carousel') setCarouselData(data || { tagLabel: '', sectionTitle: '', subtitle: '', cards: [] });
+      if (section === 'visualizer_section') {
+        const defaultVis = { media_type: 'image', image_url: null, video_url: null, fallback_image_url: null, tag_label: 'VISUALIZE YOUR SPACE', heading_line1: 'See Your Fabric', heading_line2: 'Before You Buy.', body: 'Upload a room photo, choose your fabric, and instantly see how it looks in your space — before ordering a single metre.', bullets: ['Upload your room photo', 'Browse and select any fabric', 'See it visualized in real-time', 'Save and share your favorites'], cta_text: 'LAUNCH THE VISUALIZER →', cta_link: '', secondary_link_text: '', secondary_link_url: '' };
+        setVisualizerData(data || defaultVis);
+      }
     } catch (err) {
       console.error(`Failed to load ${section}`, err);
     } finally {
@@ -86,6 +92,7 @@ export default function HomepageEditor() {
       if (activeTab === 'stats_bar') payload = statsData;
       if (activeTab === 'masonry_grid') payload = masonryData;
       if (activeTab === 'home_textiles_carousel') payload = carouselData;
+      if (activeTab === 'visualizer_section') payload = visualizerData;
 
       await fetchApi(`/api/homepage/${activeTab}`, {
         method: 'PUT',
@@ -209,6 +216,13 @@ export default function HomepageEditor() {
                 onUpload={handleFileUpload} 
                 generateId={generateId} 
                 collections={collections}
+              />
+            )}
+            {activeTab === 'visualizer_section' && (
+              <VisualizerEditor 
+                data={visualizerData} 
+                onChange={setVisualizerData} 
+                onUpload={handleFileUpload}
               />
             )}
           </>
@@ -800,6 +814,133 @@ function CarouselEditor({ data, onChange, onUpload, generateId, collections }: a
             )}
           />
         )}
+      </div>
+    </div>
+  );
+}
+
+function VisualizerEditor({ data, onChange, onUpload }: any) {
+  const addBullet = () => {
+    if (data.bullets.length >= 5) return;
+    onChange({ ...data, bullets: [...data.bullets, ''] });
+  };
+  const updateBullet = (idx: number, val: string) => {
+    const newBullets = [...data.bullets];
+    newBullets[idx] = val;
+    onChange({ ...data, bullets: newBullets });
+  };
+  const removeBullet = (idx: number) => {
+    const newBullets = [...data.bullets];
+    newBullets.splice(idx, 1);
+    onChange({ ...data, bullets: newBullets });
+  };
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 bg-slate-50 p-6 rounded-md border border-slate-200">
+      <div className="space-y-6 border-b lg:border-b-0 lg:border-r border-slate-200 pb-6 lg:pb-0 lg:pr-6">
+        <h3 className="font-semibold text-lg flex items-center"><ImageIcon className="h-4 w-4 mr-2" /> MEDIA (Left Panel)</h3>
+        
+        <div className="space-y-3">
+          <Label>Media Type</Label>
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input type="radio" name="media_type" value="image" checked={data.media_type === 'image'} onChange={() => onChange({ ...data, media_type: 'image' })} /> Image
+            </label>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input type="radio" name="media_type" value="video" checked={data.media_type === 'video'} onChange={() => onChange({ ...data, media_type: 'video' })} /> Video
+            </label>
+          </div>
+        </div>
+
+        {data.media_type === 'image' ? (
+          <div className="space-y-2">
+            <Label>Section Image</Label>
+            <Input type="file" accept="image/*" onChange={(e) => onUpload(e, (url: string) => onChange({ ...data, image_url: url }))} />
+            {data.image_url && <img src={getImageUrl(data.image_url)} alt="Preview" className="w-full h-48 object-cover rounded-md border mt-2" />}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="flex items-center"><Video className="w-4 h-4 mr-2"/> Section Video</Label>
+              <Input type="file" accept="video/mp4,video/webm" onChange={(e) => onUpload(e, (url: string) => onChange({ ...data, video_url: url }))} />
+              <p className="text-xs text-muted-foreground">Video will autoplay muted and looped on the website.</p>
+              {data.video_url && <video src={getImageUrl(data.video_url)} autoPlay muted loop playsInline className="w-full h-48 object-cover rounded-md border mt-2" />}
+            </div>
+            <div className="space-y-2 border-t pt-4">
+              <Label>Fallback Image (for mobile)</Label>
+              <Input type="file" accept="image/*" onChange={(e) => onUpload(e, (url: string) => onChange({ ...data, fallback_image_url: url }))} />
+              {data.fallback_image_url && <img src={getImageUrl(data.fallback_image_url)} alt="Fallback Preview" className="w-full h-24 object-cover rounded-md border mt-2" />}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-5">
+        <h3 className="font-semibold text-lg flex items-center"><Type className="h-4 w-4 mr-2" /> CONTENT (Right Panel)</h3>
+
+        <div className="space-y-2">
+          <Label>Tag Label</Label>
+          <Input placeholder="VISUALIZE YOUR SPACE" value={data.tag_label || ''} maxLength={40} onChange={e => onChange({ ...data, tag_label: e.target.value })} />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Heading Line 1</Label>
+            <Input placeholder="See Your Fabric" value={data.heading_line1 || ''} onChange={e => onChange({ ...data, heading_line1: e.target.value })} />
+          </div>
+          <div className="space-y-2">
+            <Label>Heading Line 2 (italic accent)</Label>
+            <Input placeholder="Before You Buy." value={data.heading_line2 || ''} onChange={e => onChange({ ...data, heading_line2: e.target.value })} />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Body Paragraph</Label>
+          <textarea className="w-full h-20 rounded-md border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-slate-900" placeholder="Upload a room photo, choose your fabric..." value={data.body || ''} onChange={e => onChange({ ...data, body: e.target.value })} />
+        </div>
+
+        <div className="space-y-3 bg-white p-4 rounded-md border">
+          <div className="flex justify-between items-center">
+            <Label>Bullet Points ({data.bullets?.length || 0}/5)</Label>
+            <Button variant="outline" size="sm" onClick={addBullet} disabled={data.bullets?.length >= 5}>
+              <Plus className="h-3 w-3 mr-1" /> Add Bullet
+            </Button>
+          </div>
+          <div className="space-y-2">
+            {data.bullets?.map((b: string, i: number) => (
+              <div key={i} className="flex items-center gap-2">
+                <div className="w-6 text-xs text-muted-foreground font-mono">0{i+1}</div>
+                <Input value={b} onChange={(e) => updateBullet(i, e.target.value)} />
+                <Button variant="ghost" size="icon" className="text-red-500 shrink-0" onClick={() => removeBullet(i)}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 border-t pt-4">
+          <div className="space-y-2">
+            <Label>CTA Button Text</Label>
+            <Input placeholder="LAUNCH THE VISUALIZER →" value={data.cta_text || ''} onChange={e => onChange({ ...data, cta_text: e.target.value })} />
+          </div>
+          <div className="space-y-2">
+            <Label>CTA Button Link</Label>
+            <Input placeholder="https://app.fabricviz.com/login" value={data.cta_link || ''} onChange={e => onChange({ ...data, cta_link: e.target.value })} />
+            <p className="text-[10px] text-muted-foreground">Leave blank to use default app URL</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Secondary Link Text (optional)</Label>
+            <Input placeholder="PREFER TO SEE FABRICS IN PERSON?" value={data.secondary_link_text || ''} onChange={e => onChange({ ...data, secondary_link_text: e.target.value })} />
+          </div>
+          <div className="space-y-2">
+            <Label>Secondary Link URL</Label>
+            <Input placeholder="/contact" value={data.secondary_link_url || ''} onChange={e => onChange({ ...data, secondary_link_url: e.target.value })} />
+          </div>
+        </div>
       </div>
     </div>
   );

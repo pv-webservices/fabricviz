@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { Image as ImageIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const DEFAULT_DATA = {
@@ -52,13 +51,15 @@ export default function VisualizerSection() {
 
   if (loading) {
     return (
-      <section className="w-full bg-brand-alt min-h-[500px] animate-pulse flex flex-col md:flex-row">
-        <div className="w-full md:w-1/2 aspect-square md:aspect-auto bg-slate-200" />
-        <div className="w-full md:w-1/2 p-8 md:p-16 lg:p-24 space-y-6">
-          <div className="h-4 bg-slate-200 w-32 mx-auto md:mx-0 rounded" />
-          <div className="h-10 bg-slate-200 w-3/4 rounded" />
-          <div className="h-10 bg-slate-200 w-1/2 rounded" />
-          <div className="h-24 bg-slate-200 w-full rounded" />
+      <section className="bg-brand-alt py-16 md:py-24">
+        <div className="max-w-[1440px] mx-auto px-4 md:px-8 flex flex-col md:flex-row items-center gap-12 md:gap-16">
+          <div className="w-full md:w-1/2 aspect-[3/4] max-w-[300px] bg-slate-200 rounded-[2.5rem] animate-pulse" />
+          <div className="w-full md:w-1/2 space-y-6">
+            <div className="h-4 bg-slate-200 w-32 rounded animate-pulse" />
+            <div className="h-10 bg-slate-200 w-3/4 rounded animate-pulse" />
+            <div className="h-10 bg-slate-200 w-1/2 rounded animate-pulse" />
+            <div className="h-24 bg-slate-200 w-full rounded animate-pulse" />
+          </div>
         </div>
       </section>
     );
@@ -68,91 +69,119 @@ export default function VisualizerSection() {
   const ctaUrl = content.cta_link || import.meta.env.VITE_APP_URL || '/login';
   
   return (
-    <section className="w-full bg-brand-alt flex flex-col md:flex-row">
-      {/* Left Panel: Media */}
-      <div className="w-full md:w-1/2 relative aspect-square md:aspect-auto min-h-[300px] md:min-h-full">
-        {content.media_type === 'video' && content.video_url ? (
-          <video
-            src={getMediaUrl(content.video_url)}
-            poster={getMediaUrl(content.fallback_image_url)}
-            autoPlay
-            muted
-            loop
-            playsInline
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-        ) : content.media_type === 'image' && content.image_url ? (
-          <img
-            src={getMediaUrl(content.image_url)}
-            alt={content.heading_line1}
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-        ) : (
-          <div className="absolute inset-0 w-full h-full bg-brand-alt/50 flex flex-col items-center justify-center border border-white/20">
-            <ImageIcon className="w-12 h-12 text-brand-muted/50 mb-2" />
-            <p className="text-sm text-brand-muted/70">No media uploaded</p>
-          </div>
-        )}
-      </div>
-
-      {/* Right Panel: Content */}
-      <div className="w-full md:w-1/2 flex flex-col justify-center px-8 md:px-16 py-12 md:py-24">
+    <section className="bg-white py-16 md:py-24 overflow-hidden relative">
+      {/* Desktop Split Background */}
+      <div className="absolute top-0 left-0 w-full md:w-1/2 h-1/2 md:h-full bg-[#F2EDE4] z-0" />
+      
+      <div className="max-w-[1440px] mx-auto px-4 md:px-8 flex flex-col md:flex-row items-center gap-12 md:gap-16 relative z-10">
         
-        {/* Tag Label */}
-        {content.tag_label && (
-          <div className="flex items-center gap-4 mb-6">
-            <div className="flex-1 h-[1px] bg-brand-accent/30 max-w-[40px]"></div>
-            <span className="text-brand-accent text-[10px] font-bold tracking-widest uppercase whitespace-nowrap">
-              {content.tag_label}
-            </span>
-            <div className="flex-1 h-[1px] bg-brand-accent/30 max-w-[40px]"></div>
+        {/* Left Panel: Media */}
+        <div className="w-full md:w-1/2 flex items-center justify-center mb-8 md:mb-0 relative">
+          
+          <div className="relative inline-flex flex-col items-center">
+            {/* LIVE PREVIEW Badge */}
+            <div className="absolute -top-3 -left-3 bg-white text-[#111] text-[9px] font-bold tracking-widest uppercase px-3 py-1.5 shadow-[0_1px_4px_rgba(0,0,0,0.12)] z-20">
+              LIVE PREVIEW
+            </div>
+
+            {/* Phone Bezel */}
+            <div className="bg-[#111] rounded-[2.5rem] p-[10px] shadow-[0_8px_32px_rgba(0,0,0,0.18),0_2px_8px_rgba(0,0,0,0.10)] inline-block relative">
+              
+              {/* Screen Area */}
+              <div className="relative overflow-hidden bg-black rounded-[2rem] w-[230px] h-[380px] md:w-[275px] md:h-[450px] lg:w-[315px] lg:h-[520px]">
+                
+                {/* Notch */}
+                <div className="absolute top-3 left-1/2 -translate-x-1/2 w-[60px] h-[18px] bg-[#111] rounded-full z-10" />
+
+                {/* Home Indicator */}
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-[60px] h-[4px] bg-white/35 rounded-full z-10" />
+
+                {/* Media Content */}
+                {content.media_type === 'video' && content.video_url ? (
+                  <video
+                    src={getMediaUrl(content.video_url)}
+                    poster={getMediaUrl(content.fallback_image_url)}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                ) : content.media_type === 'image' && content.image_url ? (
+                  <img
+                    src={getMediaUrl(content.image_url)}
+                    alt={content.heading_line1}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="absolute inset-0 w-full h-full bg-gray-100 flex flex-col items-center justify-center">
+                    <p className="text-sm text-gray-500">No media uploaded</p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-        )}
-
-        {/* Heading */}
-        <h2 className="font-serif text-3xl md:text-4xl lg:text-5xl text-brand-text mb-6">
-          {content.heading_line1 && <span className="block mb-2">{content.heading_line1}</span>}
-          {content.heading_line2 && <span className="block italic text-brand-accent">{content.heading_line2}</span>}
-        </h2>
-
-        {/* Body */}
-        {content.body && (
-          <p className="font-sans font-light text-brand-muted text-base md:text-lg leading-relaxed mb-8 max-w-xl">
-            {content.body}
-          </p>
-        )}
-
-        {/* Bullets */}
-        {content.bullets && content.bullets.length > 0 && (
-          <ul className="space-y-4 mb-10 max-w-xl">
-            {content.bullets.map((bullet: string, idx: number) => (
-              <li key={idx} className="flex items-start gap-4">
-                <span className="font-serif text-brand-accent italic min-w-[24px]">0{idx + 1}</span>
-                <span className="font-sans text-brand-text">{bullet}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {/* CTA & Secondary Link */}
-        <div className="flex flex-col items-start gap-4 mt-auto md:mt-0 pt-4">
-          <a
-            href={ctaUrl}
-            className="bg-brand-terracotta text-white px-8 py-4 uppercase font-bold tracking-widest text-xs rounded-sm hover:bg-brand-terracotta/90 transition-colors inline-block"
-          >
-            {content.cta_text || 'LAUNCH THE VISUALIZER →'}
-          </a>
-
-          {content.secondary_link_text && (
-            <Link
-              to={content.secondary_link_url || '/'}
-              className="text-[10px] uppercase tracking-widest text-brand-muted hover:text-brand-text transition-colors mt-2"
-            >
-              {content.secondary_link_text}
-            </Link>
-          )}
         </div>
 
+        {/* Right Panel: Content */}
+        <div className="w-full md:w-1/2 flex flex-col justify-center">
+          
+          {/* Tag Label */}
+          {content.tag_label && (
+            <div className="flex items-center gap-4 mb-6">
+              <div className="flex-1 h-[1px] bg-brand-accent/30 max-w-[40px]"></div>
+              <span className="text-brand-accent text-[10px] font-bold tracking-widest uppercase whitespace-nowrap">
+                {content.tag_label}
+              </span>
+              <div className="flex-1 h-[1px] bg-brand-accent/30 max-w-[40px]"></div>
+            </div>
+          )}
+
+          {/* Heading */}
+          <h2 className="font-serif text-3xl md:text-4xl lg:text-5xl text-brand-text mb-6">
+            {content.heading_line1 && <span className="block mb-2">{content.heading_line1}</span>}
+            {content.heading_line2 && <span className="block italic text-brand-accent">{content.heading_line2}</span>}
+          </h2>
+
+          {/* Body */}
+          {content.body && (
+            <p className="font-sans font-light text-brand-muted text-base md:text-lg leading-relaxed mb-8 max-w-xl">
+              {content.body}
+            </p>
+          )}
+
+          {/* Bullets */}
+          {content.bullets && content.bullets.length > 0 && (
+            <ul className="space-y-6 mb-10 max-w-xl">
+              {content.bullets.map((bullet: string, idx: number) => (
+                <li key={idx} className="flex items-start gap-4 text-lg lg:text-xl">
+                  <span className="font-serif text-brand-accent italic min-w-[32px] text-xl lg:text-2xl mt-0.5">0{idx + 1}</span>
+                  <span className="font-sans text-brand-text leading-relaxed">{bullet}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {/* CTA & Secondary Link */}
+          <div className="flex flex-col items-start gap-4 mt-auto md:mt-0 pt-4">
+            <a
+              href={ctaUrl}
+              className="bg-brand-terracotta text-white px-8 py-4 uppercase font-bold tracking-widest text-xs rounded-sm hover:bg-brand-terracotta/90 transition-colors inline-block"
+            >
+              {content.cta_text || 'LAUNCH THE VISUALIZER →'}
+            </a>
+
+            {content.secondary_link_text && (
+              <Link
+                to={content.secondary_link_url || '/'}
+                className="text-[10px] uppercase tracking-widest text-brand-muted hover:text-brand-text transition-colors mt-2"
+              >
+                {content.secondary_link_text}
+              </Link>
+            )}
+          </div>
+
+        </div>
       </div>
     </section>
   );

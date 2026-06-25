@@ -5,7 +5,7 @@ import MasonryGrid from '../components/MasonryGrid';
 import HomeTextilesCarousel from '../components/HomeTextilesCarousel';
 import VisualizerSection from '../components/VisualizerSection';
 import NewArrivals from '../components/NewArrivals';
-import DesignerCurated from '../components/DesignerCurated';
+import TestimonialsSection from '../components/TestimonialsSection';
 import USPBand from '../components/USPBand';
 
 export default function HomePage() {
@@ -17,7 +17,7 @@ export default function HomePage() {
       <HomeTextilesCarousel />
       <VisualizerSection />
       <NewArrivals />
-      <DesignerCurated />
+      <TestimonialsSection />
       <USPBand />
     </main>
   );

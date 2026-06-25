@@ -7,11 +7,13 @@ import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
 import CategoryPage from './pages/CategoryPage';
 import CatalogPage from './pages/CatalogPage';
+import { CustomerAuthProvider } from './context/CustomerAuthContext';
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <ScrollToTop />
+    <CustomerAuthProvider>
+      <BrowserRouter>
+        <ScrollToTop />
       <div className="w-full min-h-screen bg-brand-bg text-brand-text font-sans">
         <Navbar />
         
@@ -28,6 +30,7 @@ export default function App() {
         <Contact />
         <Footer />
       </div>
-    </BrowserRouter>
+      </BrowserRouter>
+    </CustomerAuthProvider>
   );
 }

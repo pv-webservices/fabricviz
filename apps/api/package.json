@@ -20,6 +20,7 @@
     "@fastify/multipart": "^8.2.0",
     "@fastify/rate-limit": "^9.1.0",
     "@fastify/static": "^6.12.0",
+    "bcrypt": "^6.0.0",
     "bcryptjs": "^2.4.3",
     "bullmq": "^5.7.8",
     "cheerio": "^1.2.0",
@@ -31,6 +32,7 @@
   },
   "devDependencies": {
     "@fabricviz/config": "workspace:*",
+    "@types/bcrypt": "^6.0.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/cheerio": "^1.0.0",
     "@types/node": "^20.12.11",

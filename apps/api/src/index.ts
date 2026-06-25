@@ -6,6 +6,7 @@ import dbPlugin from './plugins/database';
 import redisPlugin from './plugins/redis';
 import healthRoutes from './routes/health';
 import authRoutes from './routes/auth';
+import customerAuthRoutes from './routes/customer-auth';
 import collectionRoutes from './routes/collections';
 import fabricRoutes from './routes/fabrics';
 import roomRoutes from './routes/rooms';
@@ -58,6 +59,7 @@ async function start() {
     // Register routes
     await fastify.register(healthRoutes);
     await fastify.register(authRoutes);
+    await fastify.register(customerAuthRoutes);
     await fastify.register(collectionRoutes);
     await fastify.register(fabricRoutes);
     await fastify.register(roomRoutes);

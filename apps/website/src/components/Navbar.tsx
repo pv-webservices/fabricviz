@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { Menu, X, Heart, User, Sparkles } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Menu, X, Heart, User, Sparkles, LogOut, LayoutDashboard } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import AuthModal from './AuthModal';
+import FavoritesDrawer from './FavoritesDrawer';
+import { useCustomerAuth } from '../context/CustomerAuthContext';
 
 interface MenuItem {
   name: string;
@@ -37,6 +40,22 @@ export default function Navbar() {
     logo_url: '',
     menu_items: MENU_ITEMS_FALLBACK
   });
+
+  const { isAuthenticated, customer, logout, favorites } = useCustomerAuth();
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [favoritesDrawerOpen, setFavoritesDrawerOpen] = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setUserDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -91,11 +110,11 @@ export default function Navbar() {
           <div className={`transition-colors ${
             !isDarkText ? 'text-white' : 'text-brand-text'
           }`}>
-            <a href="/" className="block h-8 md:h-10">
+            <a href="/" className="block h-12 md:h-16">
               {headerData.logo_url ? (
                 <img src={headerData.logo_url} alt="Logo" className="h-full w-auto object-contain" />
               ) : (
-                <span className="font-serif text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tighter">FABRICVIZ</span>
+                <span className="font-serif text-5xl sm:text-6xl lg:text-7xl font-semibold tracking-tighter">FABRICVIZ</span>
               )}
             </a>
           </div>
@@ -107,9 +126,16 @@ export default function Navbar() {
                 <Link 
                   to={getLinkHref(menu.name, menu.href)}
                   onClick={(e) => {
-                    if (menu.name.toUpperCase() === 'CONTACT' && window.location.pathname === '/') {
-                      e.preventDefault();
-                      document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
+                    if (menu.name.toUpperCase() === 'CONTACT') {
+                      if (window.location.pathname === '/') {
+                        e.preventDefault();
+                        document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
+                      }
+                    } else if (menu.name.toUpperCase() === 'HOME') {
+                      if (window.location.pathname === '/') {
+                        e.preventDefault();
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }
                     }
                   }}
                   className={`transition-colors flex items-center gap-1 hover:text-brand-accent ${!isDarkText ? 'text-white/90 group-hover:text-brand-text' : 'text-brand-text'}`}
@@ -148,12 +174,55 @@ export default function Navbar() {
 
           {/* Icons & CTAs */}
           <div className="flex items-center gap-2 sm:gap-4 ml-auto lg:ml-4">
-            <a href="/favorites" aria-label="Favorites" className={`p-2 transition-colors ${!isDarkText ? 'text-white group-hover:text-brand-text' : 'text-brand-text hover:text-brand-accent'}`}>
-              <Heart size={20} />
-            </a>
-            <a href="/login" aria-label="Sign In" className={`p-2 transition-colors ${!isDarkText ? 'text-white group-hover:text-brand-text' : 'text-brand-text hover:text-brand-accent'}`}>
-              <User size={20} />
-            </a>
+            <button 
+              onClick={() => isAuthenticated ? setFavoritesDrawerOpen(true) : setAuthModalOpen(true)}
+              aria-label="Favorites" 
+              className={`relative p-2 transition-colors ${!isDarkText ? 'text-white group-hover:text-brand-text' : 'text-brand-text hover:text-brand-accent'}`}
+            >
+              <Heart size={20} className={favorites.length > 0 ? "fill-brand-terracotta text-brand-terracotta" : ""} />
+              {favorites.length > 0 && (
+                <span className="absolute top-0 right-0 w-4 h-4 bg-brand-terracotta text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                  {favorites.length}
+                </span>
+              )}
+            </button>
+            
+            <div className="relative" ref={dropdownRef}>
+              <button 
+                onClick={() => isAuthenticated ? setUserDropdownOpen(!userDropdownOpen) : setAuthModalOpen(true)}
+                aria-label="Account" 
+                className={`p-2 transition-colors ${!isDarkText ? 'text-white group-hover:text-brand-text' : 'text-brand-text hover:text-brand-accent'}`}
+              >
+                <User size={20} />
+              </button>
+
+              {/* User Dropdown */}
+              <AnimatePresence>
+                {isAuthenticated && userDropdownOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="absolute right-0 mt-2 w-48 bg-white shadow-xl border border-brand-dark/10 rounded-lg overflow-hidden py-2 text-brand-dark z-50"
+                  >
+                    <div className="px-4 py-2 border-b border-brand-dark/5">
+                      <p className="text-xs text-brand-dark/50 font-semibold uppercase tracking-wider mb-0.5">Signed in as</p>
+                      <p className="text-sm font-medium truncate">{customer?.full_name}</p>
+                    </div>
+                    <button onClick={() => { setUserDropdownOpen(false); setFavoritesDrawerOpen(true); }} className="w-full text-left px-4 py-2 text-sm hover:bg-brand-dark/5 flex items-center gap-2 transition-colors">
+                      <Heart size={16} /> My Favorites
+                    </button>
+                    <a href={import.meta.env.VITE_APP_URL || '/login'} className="w-full px-4 py-2 text-sm hover:bg-brand-dark/5 flex items-center gap-2 transition-colors">
+                      <LayoutDashboard size={16} /> AI Visualizer
+                    </a>
+                    <button onClick={() => { setUserDropdownOpen(false); logout(); }} className="w-full text-left px-4 py-2 text-sm text-brand-terracotta hover:bg-brand-terracotta/5 flex items-center gap-2 transition-colors border-t border-brand-dark/5 mt-1 pt-3">
+                      <LogOut size={16} /> Sign Out
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
             <a href={import.meta.env.VITE_APP_URL || '/login'} className="hidden sm:inline-flex items-center gap-2 bg-brand-terracotta text-white px-5 py-2 text-[10px] font-bold tracking-widest uppercase rounded-sm transition-colors hover:opacity-90 ml-2">
               <Sparkles size={14} /> VISUALIZER
             </a>
@@ -177,9 +246,16 @@ export default function Navbar() {
                   <Link 
                     to={getLinkHref(menu.name, menu.href)} 
                     onClick={(e) => {
-                      if (menu.name.toUpperCase() === 'CONTACT' && window.location.pathname === '/') {
-                        e.preventDefault();
-                        document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
+                      if (menu.name.toUpperCase() === 'CONTACT') {
+                        if (window.location.pathname === '/') {
+                          e.preventDefault();
+                          document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
+                        }
+                      } else if (menu.name.toUpperCase() === 'HOME') {
+                        if (window.location.pathname === '/') {
+                          e.preventDefault();
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }
                       }
                       setMobileMenuOpen(false);
                     }}
@@ -210,6 +286,9 @@ export default function Navbar() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
+      <FavoritesDrawer isOpen={favoritesDrawerOpen} onClose={() => setFavoritesDrawerOpen(false)} />
     </>
   );
 }

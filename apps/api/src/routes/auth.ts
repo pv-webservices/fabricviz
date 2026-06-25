@@ -216,17 +216,19 @@ export default async function authRoutes(fastify: FastifyInstance) {
             featureFlags: ac?.feature_flags ?? [],
           }),
         );
+      } else if (user.type === 'admin') {
+        // Admin
+        return reply.send(
+          success({
+            type: 'admin',
+            userId: user.userId,
+            email: user.email,
+            role: user.role,
+          }),
+        );
       }
-
-      // Admin
-      return reply.send(
-        success({
-          type: 'admin',
-          userId: user.userId,
-          email: user.email,
-          role: user.role,
-        }),
-      );
+      
+      return reply.status(403).send(error('FORBIDDEN', 'Invalid or unrecognized user type'));
     },
   );
 
@@ -251,7 +253,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
           entityId: sessionId,
           ipAddress: request.ip,
         });
-      } else {
+      } else if (user.type === 'admin') {
         await writeAuditLog(fastify.db, {
           userId: user.userId,
           action: 'admin_logout',

@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Heart, Eye, ZoomIn } from 'lucide-react';
 import FabricZoomModal from '../components/FabricZoomModal';
+import { useCustomerAuth } from '../context/CustomerAuthContext';
+import AuthModal from '../components/AuthModal';
 
 export default function CatalogPage() {
   const { id } = useParams();
@@ -11,32 +13,17 @@ export default function CatalogPage() {
   
   const [selectedFabric, setSelectedFabric] = useState<any>(null);
 
-  // Favorites state
-  const [favorites, setFavorites] = useState<string[]>([]);
+  const { favorites, toggleFavorite: apiToggleFavorite, isAuthenticated } = useCustomerAuth();
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
 
-  // Initialize favorites from localStorage
-  useEffect(() => {
-    const stored = localStorage.getItem('fabricviz_favorites');
-    if (stored) {
-      try {
-        setFavorites(JSON.parse(stored));
-      } catch (e) {
-        console.error('Failed to parse favorites');
-      }
-    }
-  }, []);
-
-  const toggleFavorite = (fabricId: string, e: React.MouseEvent) => {
+  const handleToggleFavorite = async (fabricId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    let newFavorites;
-    if (favorites.includes(fabricId)) {
-      newFavorites = favorites.filter(id => id !== fabricId);
-    } else {
-      newFavorites = [...favorites, fabricId];
+    if (!isAuthenticated) {
+      setAuthModalOpen(true);
+      return;
     }
-    setFavorites(newFavorites);
-    localStorage.setItem('fabricviz_favorites', JSON.stringify(newFavorites));
+    await apiToggleFavorite(fabricId);
   };
 
   useEffect(() => {
@@ -145,7 +132,7 @@ export default function CatalogPage() {
                           <ZoomIn size={14} />
                         </button>
                         <button 
-                          onClick={(e) => toggleFavorite(fabric.id, e)}
+                          onClick={(e) => handleToggleFavorite(fabric.id, e)}
                           className={`p-1.5 shadow-sm rounded-full transition-colors ${favorites.includes(fabric.id) ? 'bg-brand-terracotta text-white' : 'bg-white hover:bg-gray-50 text-brand-accent'}`}
                         >
                           <Heart size={14} className={favorites.includes(fabric.id) ? "fill-white" : "fill-transparent hover:fill-current"} />
@@ -185,6 +172,7 @@ export default function CatalogPage() {
             onClose={() => setSelectedFabric(null)} 
           />
         )}
+        <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
       </div>
     </div>
   );

@@ -13,7 +13,8 @@ import {
   BarChart3, 
   HardDrive, 
   Settings,
-  Globe
+  Globe,
+  Key
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -22,7 +23,8 @@ const navigation = [
   { name: 'Homepage', href: '/admin/homepage', icon: Globe },
   { name: 'Collections', href: '/admin/collections', icon: Layers },
   { name: 'Rooms', href: '/admin/rooms', icon: ImageIcon },
-  { name: 'Customers', href: '/admin/customers', icon: Users },
+  { name: 'Customers (B2C)', href: '/admin/customers', icon: Users },
+  { name: 'Access Codes (B2B)', href: '/admin/access-codes', icon: Key },
   { name: 'Requests', href: '/admin/requests', icon: Inbox },
   { name: 'Credits', href: '/admin/credits', icon: CreditCard },
   { name: 'Analytics', href: '/admin/analytics', icon: BarChart3 },

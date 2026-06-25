@@ -1,7 +1,10 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { motion, useInView } from 'motion/react';
 import { Link } from 'react-router-dom';
+import { Heart } from 'lucide-react';
 import FabricZoomModal from './FabricZoomModal';
+import { useCustomerAuth } from '../context/CustomerAuthContext';
+import AuthModal from './AuthModal';
 
 const getImageUrl = (url: string | null) => {
   if (!url) return '';
@@ -16,6 +19,17 @@ export default function NewArrivals() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedFabric, setSelectedFabric] = useState<any>(null);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const { favorites, toggleFavorite, isAuthenticated } = useCustomerAuth();
+
+  const handleToggleFavorite = async (fabricId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isAuthenticated) {
+      setAuthModalOpen(true);
+      return;
+    }
+    await toggleFavorite(fabricId);
+  };
 
   useEffect(() => {
     async function loadData() {
@@ -130,6 +144,15 @@ export default function NewArrivals() {
                   aria-label={`Quick view ${fabric.name}`}
                 />
 
+                <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-20">
+                  <button 
+                    onClick={(e) => handleToggleFavorite(fabric.id, e)}
+                    className={`p-1.5 shadow-sm rounded-full transition-colors opacity-100 ${favorites.includes(fabric.id) ? 'bg-brand-terracotta text-white' : 'bg-white/90 hover:bg-white text-brand-accent md:opacity-0 md:group-hover:opacity-100'}`}
+                  >
+                    <Heart size={14} className={favorites.includes(fabric.id) ? "fill-white" : "fill-transparent hover:fill-current"} />
+                  </button>
+                </div>
+
                 {fabric.quality && (
                   <div className="absolute top-2 left-2 sm:top-4 sm:left-4 bg-white/95 backdrop-blur text-[8px] sm:text-[10px] font-bold tracking-widest uppercase px-2 sm:px-3 py-1 text-brand-text rounded-sm shadow-sm md:block hidden group-hover:block">
                     {fabric.quality}
@@ -166,6 +189,7 @@ export default function NewArrivals() {
           onClose={() => setSelectedFabric(null)}
         />
       )}
+      <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
     </section>
   );
 }

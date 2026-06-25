@@ -19,7 +19,12 @@ export interface AdminTokenPayload {
   role: string;
 }
 
-export type TokenPayload = CustomerTokenPayload | AdminTokenPayload;
+export interface CustomerUserTokenPayload {
+  type: 'customer_user';
+  customerId: string;
+}
+
+export type TokenPayload = CustomerTokenPayload | AdminTokenPayload | CustomerUserTokenPayload;
 
 declare module '@fastify/jwt' {
   interface FastifyJWT {

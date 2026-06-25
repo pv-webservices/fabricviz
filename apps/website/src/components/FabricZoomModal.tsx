@@ -1,5 +1,7 @@
-import React from 'react';
-import { X } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Heart } from 'lucide-react';
+import { useCustomerAuth } from '../context/CustomerAuthContext';
+import AuthModal from './AuthModal';
 
 interface FabricZoomModalProps {
   fabric: any;
@@ -8,6 +10,9 @@ interface FabricZoomModalProps {
 }
 
 export default function FabricZoomModal({ fabric, collection, onClose }: FabricZoomModalProps) {
+  const { favorites, toggleFavorite, isAuthenticated } = useCustomerAuth();
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+
   if (!fabric) return null;
 
   const getImageUrl = (url: string) => {
@@ -45,9 +50,20 @@ export default function FabricZoomModal({ fabric, collection, onClose }: FabricZ
 
         {/* Right Side: Details */}
         <div className="w-full md:w-2/5 p-8 overflow-y-auto">
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-white mb-1 uppercase tracking-wide">{fabric.name}</h2>
-            <p className="text-brand-muted font-mono text-sm">{fabric.code}</p>
+          <div className="mb-8 flex justify-between items-start gap-4">
+            <div>
+              <h2 className="text-2xl font-bold text-white mb-1 uppercase tracking-wide">{fabric.name}</h2>
+              <p className="text-brand-muted font-mono text-sm">{fabric.code}</p>
+            </div>
+            <button 
+              onClick={() => {
+                if (!isAuthenticated) setAuthModalOpen(true);
+                else toggleFavorite(fabric.id);
+              }}
+              className={`p-2.5 rounded-full transition-colors border ${favorites.includes(fabric.id) ? 'bg-brand-terracotta border-brand-terracotta text-white' : 'bg-transparent border-white/20 text-white hover:border-white/50'}`}
+            >
+              <Heart size={20} className={favorites.includes(fabric.id) ? "fill-white" : ""} />
+            </button>
           </div>
 
           <div className="space-y-4 text-sm">
@@ -91,6 +107,7 @@ export default function FabricZoomModal({ fabric, collection, onClose }: FabricZ
           )}
         </div>
       </div>
+      <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
     </div>
   );
 }

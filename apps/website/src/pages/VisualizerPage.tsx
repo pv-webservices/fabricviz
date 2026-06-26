@@ -1,24 +1,39 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCustomerAuth } from '../context/CustomerAuthContext';
-import { ArrowLeft, Upload, Wand2, Loader2, History, RotateCcw, Image as ImageIcon, Sofa, Blinds, Grid } from 'lucide-react';
+import { ArrowLeft, Upload, Wand2, Loader2, History, RotateCcw, Image as ImageIcon, Sofa, Blinds, Grid, Bed, Square, Plus, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import AuthModal from '@/components/AuthModal';
 
+const STYLE_AREAS = [
+  { id: 'sofa_seat', label: 'Sofa Seat', category: 'sofa', icon: Sofa },
+  { id: 'sofa_back', label: 'Sofa Back', category: 'sofa', icon: Sofa },
+  { id: 'sofa_all', label: 'Sofa All', category: 'sofa', icon: Sofa },
+  { id: 'front_curtain', label: 'Front Curtain', category: 'curtain', icon: Blinds },
+  { id: 'back_curtain', label: 'Back Curtain', category: 'curtain', icon: Blinds },
+  { id: 'headboard', label: 'Headboard', category: 'sofa', icon: Bed }, 
+  { id: 'cushion', label: 'Cushion', category: 'sofa', icon: Square },
+  { id: 'rug', label: 'Rug', category: 'rug', icon: Grid },
+  { id: 'floor', label: 'Floor', category: 'rug', icon: Grid },
+  { id: 'accent_wall', label: 'Accent Wall', category: 'wallpaper', icon: ImageIcon },
+  { id: 'all_walls', label: 'All Walls', category: 'wallpaper', icon: ImageIcon },
+];
+
 export default function VisualizerPage() {
   const navigate = useNavigate();
-  const { isAuthenticated, loading, favoriteFabrics, favorites, clearAllFavorites } = useCustomerAuth();
+  const { isAuthenticated, loading, favoriteFabrics } = useCustomerAuth();
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [browseModalOpen, setBrowseModalOpen] = useState(false);
   const [showRooms, setShowRooms] = useState(false);
   
-  const [step, setStep] = useState(2); // 1 = Favorites, 2 = Room, 3 = Render
-  const [selectedFabric, setSelectedFabric] = useState<any>(null);
+  const [step, setStep] = useState(1); // 1 = Room, 2 = Editor, 3 = Render
   
   const [rooms, setRooms] = useState<any[]>([]);
   const [selectedRoom, setSelectedRoom] = useState<any>(null);
-  const [localRoomImage, setLocalRoomImage] = useState<string | null>(null);
+  
+  // Fabric assignment state
+  const [assignments, setAssignments] = useState<Record<string, any>>({});
+  const [activeArea, setActiveArea] = useState<string | null>(null);
   
   const [isRendering, setIsRendering] = useState(false);
   const [renderedImage, setRenderedImage] = useState<string | null>(null);
@@ -50,38 +65,40 @@ export default function VisualizerPage() {
     const file = e.target.files?.[0];
     if (file) {
       const url = URL.createObjectURL(file);
-      setLocalRoomImage(url);
       const room = { id: 'local', name: 'Custom Room', image_url: url };
       setSelectedRoom(room);
-      if (selectedFabric) {
-        handleRender(room);
-      }
+      setStep(2); // Go to Editor
     }
   };
 
   const handleRoomSelect = (room: any) => {
     setSelectedRoom(room);
-    if (selectedFabric) {
-      handleRender(room);
-    }
+    setStep(2); // Go to Editor
   };
 
-  const handleRender = (roomToRender = selectedRoom) => {
+  const handleAssignFabric = (fabric: any) => {
+    if (activeArea) {
+      setAssignments(prev => ({ ...prev, [activeArea]: fabric }));
+    }
+    setActiveArea(null);
+  };
+
+  const handleRender = () => {
+    if (Object.keys(assignments).length === 0) return; // Must have at least one assignment
     setIsRendering(true);
     setStep(3);
     
     // Mock rendering delay
     setTimeout(() => {
       setIsRendering(false);
-      setRenderedImage(roomToRender?.image_url);
+      setRenderedImage(selectedRoom?.image_url);
     }, 2500);
   };
 
   const reset = () => {
-    setStep(2);
-    setSelectedFabric(null);
+    setStep(1);
+    setAssignments({});
     setSelectedRoom(null);
-    setLocalRoomImage(null);
     setRenderedImage(null);
     setShowRooms(false);
   };
@@ -101,6 +118,11 @@ export default function VisualizerPage() {
     );
   }
 
+  const assignedCount = Object.keys(assignments).length;
+  const activeAreaObj = STYLE_AREAS.find(a => a.id === activeArea);
+  // Filter favorites by the category of the active area (falling back to empty array if none)
+  const filteredFavorites = activeAreaObj ? favoriteFabrics.filter((f: any) => f.category && f.category.toLowerCase() === activeAreaObj.category.toLowerCase()) : [];
+
   return (
     <div className="min-h-screen pt-[70px] md:pt-[92px] flex flex-col font-sans bg-brand-bg text-brand-text">
       <div className="flex-1 flex flex-col">
@@ -119,15 +141,18 @@ export default function VisualizerPage() {
         <div className="flex justify-center mb-8">
           <div className="flex items-center bg-black/5 rounded-full p-1">
             <div 
-              onClick={() => navigate('/favorites')}
-              className={`px-4 md:px-6 py-2 rounded-full flex items-center gap-2 text-sm font-medium transition-colors cursor-pointer ${step === 1 ? 'bg-brand-terracotta text-white' : 'text-brand-muted hover:text-brand-text'}`}
+              onClick={() => step > 1 ? setStep(1) : null}
+              className={`px-4 md:px-6 py-2 rounded-full flex items-center gap-2 text-sm font-medium transition-colors ${step === 1 ? 'bg-brand-terracotta text-white' : 'text-brand-muted hover:text-brand-text cursor-pointer'}`}
             >
               <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${step === 1 ? 'bg-white text-brand-terracotta' : 'bg-black/20 text-brand-text'}`}>1</div>
-              Favorites
-            </div>
-            <div className={`px-4 md:px-6 py-2 rounded-full flex items-center gap-2 text-sm font-medium transition-colors ${step === 2 ? 'bg-brand-terracotta text-white' : 'text-brand-muted hover:text-brand-text'}`}>
-              <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${step === 2 ? 'bg-white text-brand-terracotta' : 'bg-black/20 text-brand-text'}`}>2</div>
               Room
+            </div>
+            <div 
+              onClick={() => step > 2 ? setStep(2) : null}
+              className={`px-4 md:px-6 py-2 rounded-full flex items-center gap-2 text-sm font-medium transition-colors ${step === 2 ? 'bg-brand-terracotta text-white' : 'text-brand-muted hover:text-brand-text cursor-pointer'}`}
+            >
+              <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${step === 2 ? 'bg-white text-brand-terracotta' : 'bg-black/20 text-brand-text'}`}>2</div>
+              Assign Fabrics
             </div>
             <div className={`px-4 md:px-6 py-2 rounded-full flex items-center gap-2 text-sm font-medium transition-colors ${step === 3 ? 'bg-brand-terracotta text-white' : 'text-brand-muted hover:text-brand-text'}`}>
               <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${step === 3 ? 'bg-white text-brand-terracotta' : 'bg-black/20 text-brand-text'}`}>3</div>
@@ -153,7 +178,7 @@ export default function VisualizerPage() {
                   <Wand2 size={48} className="animate-pulse" />
                   <Loader2 size={24} className="animate-spin text-brand-muted" />
                   <div className="text-xl font-bold animate-pulse text-brand-text mt-2 font-serif tracking-wide">AI is weaving your fabric...</div>
-                  <p className="text-brand-muted text-sm">Applying {selectedFabric?.title} to the selected room.</p>
+                  <p className="text-brand-muted text-sm">Applying {assignedCount} fabric{assignedCount !== 1 ? 's' : ''} to the selected room.</p>
                 </div>
               ) : (
                 <div className="w-full max-w-5xl flex flex-col items-center animate-in fade-in zoom-in duration-500">
@@ -161,14 +186,14 @@ export default function VisualizerPage() {
                     <img src={renderedImage!} alt="Rendered Room" className="w-full h-full object-cover" />
                     <div className="absolute inset-x-0 bottom-0 p-6 bg-gradient-to-t from-black/80 to-transparent flex items-end justify-between opacity-0 group-hover:opacity-100 transition-opacity">
                       <div>
-                        <h3 className="text-white font-bold text-2xl font-serif tracking-wide">{selectedFabric?.title}</h3>
-                        <p className="text-white/80 text-sm uppercase tracking-wider">{selectedFabric?.code}</p>
+                        <h3 className="text-white font-bold text-2xl font-serif tracking-wide">Render Complete</h3>
+                        <p className="text-white/80 text-sm uppercase tracking-wider">{assignedCount} Area{assignedCount !== 1 ? 's' : ''} Assigned</p>
                       </div>
                     </div>
                   </div>
                   <div className="flex gap-4 mt-8">
                     <Button onClick={() => setStep(2)} variant="outline" className="border-brand-text/20 text-brand-text hover:bg-black/5">
-                      Change Room
+                      Edit Assignments
                     </Button>
                     <Button onClick={reset} className="bg-brand-terracotta hover:bg-[#c95841] text-white">
                       Start New Project
@@ -177,55 +202,81 @@ export default function VisualizerPage() {
                 </div>
               )}
             </div>
+          ) : step === 2 ? (
+            <div className="bg-white rounded-2xl border border-black/5 p-4 md:p-6 shadow-xl animate-in slide-in-from-right fade-in duration-300">
+              {/* Top Room Banner */}
+              <div className="w-full aspect-[16/9] md:aspect-[24/9] bg-brand-alt relative rounded-xl overflow-hidden mb-6 border border-black/5">
+                <img src={selectedRoom?.image_url} alt="Room" className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-transparent pointer-events-none" />
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-md text-white text-xs font-bold px-4 py-1.5 rounded-full flex items-center gap-2 shadow-lg">
+                   <Check size={14} className="text-green-400" /> Room Ready
+                </div>
+              </div>
+
+              {/* Style Areas Section */}
+              <div className="bg-brand-alt/20 border border-black/5 rounded-xl p-4 md:p-6 mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-bold text-lg font-serif">Style areas</h3>
+                  <span className="text-xs text-brand-muted font-semibold">{assignedCount}/{STYLE_AREAS.length} assigned</span>
+                </div>
+                
+                <div className="flex overflow-x-auto gap-4 md:gap-6 pb-4 custom-scrollbar snap-x">
+                  {STYLE_AREAS.map(area => {
+                    const isAssigned = !!assignments[area.id];
+                    const fabric = assignments[area.id];
+                    const Icon = area.icon;
+                    return (
+                      <div 
+                        key={area.id} 
+                        onClick={() => setActiveArea(area.id)}
+                        className="flex flex-col items-center gap-2 cursor-pointer flex-none snap-start group w-[72px]"
+                      >
+                        <div className={`w-16 h-16 rounded-full flex items-center justify-center relative transition-transform group-hover:scale-105 ${isAssigned ? 'bg-brand-terracotta/10 border-2 border-brand-terracotta' : 'bg-white border border-black/10 hover:border-black/30 shadow-sm'}`}>
+                          {isAssigned ? (
+                            <img src={fabric.image_url} alt={fabric.title} className="w-full h-full rounded-full object-cover" />
+                          ) : (
+                            <Icon size={24} className="text-brand-muted group-hover:text-brand-text transition-colors" />
+                          )}
+                          {!isAssigned && (
+                             <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-white rounded-full border border-black/10 flex items-center justify-center shadow-sm">
+                               <Plus size={12} className="text-brand-terracotta" />
+                             </div>
+                          )}
+                          {isAssigned && (
+                            <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-brand-terracotta rounded-full border-2 border-white flex items-center justify-center shadow-sm">
+                               <Check size={10} className="text-white stroke-[3]" />
+                             </div>
+                          )}
+                        </div>
+                        <span className="text-[10px] md:text-xs font-semibold text-brand-text text-center leading-tight whitespace-normal">{area.label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-center text-xs text-brand-muted mt-2">Tap any circle to pick a fabric from your favorites</p>
+              </div>
+
+              {/* Bottom Action Bar */}
+              <div className="bg-brand-bg rounded-xl border border-black/5 p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="text-brand-muted text-xs font-semibold">
+                  <span className="text-brand-terracotta font-bold">18 of 30 credits left</span> - 12 used
+                </div>
+                <Button 
+                  onClick={handleRender} 
+                  disabled={assignedCount === 0}
+                  className={`w-full md:w-auto px-8 font-bold tracking-wider ${assignedCount > 0 ? 'bg-brand-terracotta hover:bg-[#c95841] text-white' : 'bg-black/5 text-black/40'}`}
+                >
+                  <Wand2 size={16} className="mr-2" />
+                  {assignedCount > 0 ? 'RENDER SCENE' : 'Assign a fabric to start'}
+                </Button>
+              </div>
+
+            </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-black/5 p-6 md:p-10 shadow-xl">
+            <div className="bg-white rounded-2xl border border-black/5 p-6 md:p-10 shadow-xl animate-in slide-in-from-left fade-in duration-300">
               <div className="text-center mb-10">
                 <h1 className="text-3xl md:text-4xl font-bold text-brand-text mb-2 font-serif tracking-wide">Choose Your Room Photo</h1>
                 <p className="text-brand-muted text-sm md:text-base">Pick a sample room, take a photo, or upload one from your gallery</p>
-              </div>
-
-              {/* Favorites Strip */}
-              <div className="bg-brand-alt/30 rounded-xl border border-black/5 p-4 mb-8">
-                <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-brand-terracotta">
-                    <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                    Your Favorites ({favorites.length}/20)
-                  </div>
-                  <div className="flex items-center gap-4 text-xs font-semibold">
-                    <button 
-                      onClick={() => setBrowseModalOpen(true)} 
-                      className="text-brand-text px-3 py-1.5 border border-black/10 rounded hover:bg-black/5 transition-colors"
-                    >
-                      Browse more from catalog
-                    </button>
-                    <button onClick={() => navigate('/favorites')} className="text-brand-terracotta hover:text-brand-terracotta/80 transition-colors">Edit Favorites</button>
-                    <button onClick={clearAllFavorites} className="text-brand-terracotta hover:text-brand-terracotta/80 transition-colors">Clear all</button>
-                  </div>
-                </div>
-
-                {favoriteFabrics.length === 0 ? (
-                  <div className="h-28 flex items-center justify-center border border-dashed border-black/10 rounded-lg bg-white/50">
-                    <p className="text-brand-muted text-sm">No favorites found.</p>
-                  </div>
-                ) : (
-                  <div className="flex overflow-x-auto gap-3 pb-2 custom-scrollbar snap-x">
-                    {favoriteFabrics.map((fav: any) => (
-                      <div 
-                        key={fav.id}
-                        onClick={() => setSelectedFabric(fav)}
-                        className={`flex-none w-20 md:w-24 cursor-pointer transition-all snap-start rounded-lg overflow-hidden border-2 ${selectedFabric?.id === fav.id ? 'border-brand-terracotta shadow-[0_0_10px_rgba(224,103,79,0.2)]' : 'border-transparent hover:border-black/10'}`}
-                      >
-                        <div className="aspect-square bg-brand-alt relative">
-                          <img src={fav.image_url} alt={fav.title} className="w-full h-full object-cover" />
-                          <div className="absolute inset-x-0 bottom-0 p-1.5 bg-white/90 backdrop-blur-sm text-center border-t border-black/5 flex flex-col items-center justify-center">
-                            <p className="text-[9px] text-brand-text font-bold truncate w-full leading-tight">{fav.title}</p>
-                            <p className="text-[7px] text-brand-muted uppercase tracking-widest truncate w-full mt-0.5 leading-none">{fav.code}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
 
               {/* Room Selection Buttons */}
@@ -251,7 +302,7 @@ export default function VisualizerPage() {
                         <div 
                           key={room.id}
                           className="relative rounded-xl overflow-hidden cursor-pointer group border border-black/5"
-                          onClick={() => handleRoomSelect(room)}
+                          onClick={() => handleRoomSelect({...room, image_url: imageUrl})}
                         >
                           <div className="aspect-[4/3] bg-brand-alt relative">
                             <img src={imageUrl} alt={room.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
@@ -287,27 +338,38 @@ export default function VisualizerPage() {
         </div>
       </div>
 
-      {/* Browse More Modal */}
-      <Modal isOpen={browseModalOpen} onClose={() => setBrowseModalOpen(false)} title="Browse Catalog" className="max-w-2xl bg-white border border-black/10 text-brand-text">
-        <div className="grid grid-cols-2 gap-4 mt-4">
-          {[
-            { title: 'Sofa Fabrics', endUse: 'sofa', icon: <Sofa className="h-6 w-6" /> },
-            { title: 'Curtain Fabrics', endUse: 'curtain', icon: <Blinds className="h-6 w-6" /> },
-            { title: 'Rugs', endUse: 'rug', icon: <Grid className="h-6 w-6" /> },
-            { title: 'Wallpaper', endUse: 'wallpaper', icon: <ImageIcon className="h-6 w-6" /> }
-          ].map((cat) => (
-            <div 
-              key={cat.endUse}
-              onClick={() => { setBrowseModalOpen(false); navigate(cat.endUse === 'sofa' || cat.endUse === 'curtain' ? `/${cat.endUse}` : `/category/${cat.endUse}`); }}
-              className="group p-6 bg-brand-alt/20 hover:bg-brand-terracotta/5 border border-black/5 hover:border-brand-terracotta/30 rounded-xl cursor-pointer transition-all flex flex-col justify-between h-32"
-            >
-              <h3 className="font-bold text-lg text-brand-text group-hover:text-brand-terracotta transition-colors font-serif tracking-wide">{cat.title}</h3>
-              <div className="self-end text-brand-muted/50 group-hover:text-brand-terracotta transform group-hover:scale-110 transition-all">
-                {cat.icon}
+      {/* Fabric Assignment Modal */}
+      <Modal isOpen={!!activeArea} onClose={() => setActiveArea(null)} title={`Choose a fabric for ${activeAreaObj?.label}`} className="max-w-3xl bg-white border border-black/10 text-brand-text">
+        <p className="text-sm text-brand-muted mb-6 -mt-2">Tap an item from your favorites to assign it.</p>
+        
+        {filteredFavorites.length === 0 ? (
+          <div className="py-12 flex flex-col items-center justify-center text-center border border-dashed border-black/10 rounded-xl bg-brand-bg">
+            <ImageIcon size={48} className="text-brand-muted mb-4 opacity-30" />
+            <h3 className="font-bold text-lg mb-2">No matching favorites</h3>
+            <p className="text-brand-muted text-sm max-w-sm mb-6">You don't have any favorite fabrics in the <strong>{activeAreaObj?.category}</strong> category yet.</p>
+            <Button onClick={() => { setActiveArea(null); navigate(activeAreaObj?.category === 'sofa' || activeAreaObj?.category === 'curtain' ? `/${activeAreaObj.category}` : `/category/${activeAreaObj?.category}`); }} className="bg-brand-terracotta hover:bg-[#c95841] text-white">
+              Browse {activeAreaObj?.category} fabrics
+            </Button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 custom-scrollbar max-h-[60vh] overflow-y-auto pb-4 px-1">
+            {filteredFavorites.map((fav: any) => (
+              <div 
+                key={fav.id}
+                onClick={() => handleAssignFabric(fav)}
+                className="group relative bg-brand-bg rounded-xl overflow-hidden border border-black/5 hover:border-brand-terracotta hover:shadow-md cursor-pointer transition-all"
+              >
+                <div className="aspect-square relative overflow-hidden bg-brand-alt">
+                  <img src={fav.image_url} alt={fav.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                </div>
+                <div className="p-3 bg-white">
+                  <h3 className="font-bold text-sm truncate">{fav.title}</h3>
+                  <p className="text-[10px] text-brand-muted uppercase tracking-wider truncate">{fav.code}</p>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </Modal>
 
     </div>

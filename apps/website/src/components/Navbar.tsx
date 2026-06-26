@@ -39,6 +39,7 @@ export default function Navbar() {
     logo_url: '',
     menu_items: MENU_ITEMS_FALLBACK
   });
+  const [loading, setLoading] = useState(true);
 
   const { isAuthenticated, customer, logout, favorites } = useCustomerAuth();
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -80,6 +81,8 @@ export default function Navbar() {
         }
       } catch (error) {
         console.error('Error fetching header data:', error);
+      } finally {
+        setLoading(false);
       }
     };
     fetchHeaderData();
@@ -118,7 +121,9 @@ export default function Navbar() {
             !isDarkText ? 'text-white' : 'text-brand-text'
           }`}>
             <a href="/" className="block h-12 md:h-16">
-              {headerData.logo_url ? (
+              {loading ? (
+                <div className="h-full w-48 bg-white/10 animate-pulse rounded" />
+              ) : headerData.logo_url ? (
                 <img src={headerData.logo_url} alt="Logo" className="h-full w-auto object-contain" />
               ) : (
                 <span className="font-serif text-5xl sm:text-6xl lg:text-7xl font-semibold tracking-tighter">FABRICVIZ</span>

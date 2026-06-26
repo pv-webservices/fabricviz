@@ -40,8 +40,9 @@ const SLIDES_FALLBACK: HeroBanner[] = [
 
 export default function Hero() {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [slides, setSlides] = useState<HeroBanner[]>(SLIDES_FALLBACK);
-  const [runningText, setRunningText] = useState<string>("Velvet • Chenille • Jacquard • Linen • Silk • Sheer • Blackout • Performance • Faux Leather • Suede • Brocade");
+  const [slides, setSlides] = useState<HeroBanner[]>([]);
+  const [runningText, setRunningText] = useState<string>("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -71,6 +72,8 @@ export default function Hero() {
         }
       } catch (err) {
         console.error('Error fetching hero data:', err);
+      } finally {
+        setLoading(false);
       }
     };
     fetchData();
@@ -85,6 +88,10 @@ export default function Hero() {
 
   const nextSlide = () => setCurrentIndex((prev) => (prev + 1) % slides.length);
   const prevSlide = () => setCurrentIndex((prev) => (prev - 1 + slides.length) % slides.length);
+
+  if (loading || slides.length === 0) {
+    return <div className="w-full aspect-[3/4] sm:aspect-[16/9] md:aspect-[2/1] lg:min-h-[85vh] bg-[#1E1A14] animate-pulse"></div>;
+  }
 
   return (
     <div className="relative w-full aspect-[3/4] sm:aspect-[16/9] md:aspect-[2/1] lg:min-h-[85vh] bg-brand-dark overflow-hidden group">

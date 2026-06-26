@@ -40,7 +40,7 @@ export default function CategoryPage({ endUse: endUseProp }: CategoryPageProps) 
   };
 
   return (
-    <div className="min-h-screen bg-brand-dark pt-24 pb-20 px-4 md:px-8">
+    <div className="min-h-screen bg-brand-dark pt-28 md:pt-36 pb-20 px-4 md:px-8">
       <div className="max-w-[1440px] mx-auto">
         <Link to="/" className="text-brand-muted hover:text-brand-accent text-sm font-semibold tracking-wide flex items-center gap-2 mb-8 transition-colors">
           &larr; Back to home

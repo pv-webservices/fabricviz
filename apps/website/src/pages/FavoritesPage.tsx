@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, ArrowLeft, Trash2, Search, ArrowRight, LayoutDashboard } from 'lucide-react';
+import { Heart, ArrowLeft, Trash2, Search, ArrowRight, LayoutDashboard, Sofa, Blinds, Grid, Image as ImageIcon } from 'lucide-react';
 import { useCustomerAuth } from '../context/CustomerAuthContext';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
@@ -18,7 +18,7 @@ export default function FavoritesPage() {
   const handleBrowseMore = () => setBrowseModalOpen(true);
   
   return (
-    <div className="min-h-screen bg-brand-bg text-brand-text pt-24 pb-32">
+    <div className="min-h-screen bg-[#1E1A14] text-white pt-28 md:pt-36 pb-32">
       <div className="max-w-[1440px] mx-auto px-4 md:px-6 lg:px-12">
         
         {/* Header */}
@@ -28,7 +28,7 @@ export default function FavoritesPage() {
           </button>
           <div>
             <h1 className="font-serif text-3xl md:text-5xl font-bold">My Favorites</h1>
-            <p className="text-brand-muted mt-2">Saved fabrics for your visualization projects</p>
+            <p className="text-white/60 mt-2">Saved fabrics for your visualization projects</p>
           </div>
         </div>
 
@@ -54,8 +54,8 @@ export default function FavoritesPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
             {favoriteFabrics.map((fav: any) => (
-              <div key={fav.id} className="group relative bg-[#1e1e1e] rounded-xl overflow-hidden border border-white/5 hover:border-brand-terracotta/50 transition-colors">
-                <div className="aspect-square relative overflow-hidden bg-slate-800">
+              <div key={fav.id} className="group relative bg-[#1c1915] rounded-xl overflow-hidden border border-white/5 shadow-sm hover:border-[#C9A060]/50 transition-colors">
+                <div className="aspect-square relative overflow-hidden bg-black/20">
                   <img src={fav.image_url} alt={fav.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                   <button 
                     onClick={(e) => { e.preventDefault(); toggleFavorite(fav.id); }}
@@ -66,11 +66,11 @@ export default function FavoritesPage() {
                   </button>
                 </div>
                 <div className="p-4">
-                  <div className="text-[10px] font-bold tracking-widest text-brand-terracotta uppercase mb-1">
+                  <div className="text-[10px] font-bold tracking-widest text-[#C9A060] uppercase mb-1">
                     {fav.collection_name || 'COLLECTION'}
                   </div>
                   <h3 className="font-bold text-lg mb-1 truncate text-white">{fav.title}</h3>
-                  <p className="text-xs text-brand-muted uppercase tracking-wider">{fav.code}</p>
+                  <p className="text-xs text-white/50 uppercase tracking-wider">{fav.code}</p>
                 </div>
               </div>
             ))}
@@ -81,7 +81,7 @@ export default function FavoritesPage() {
       {/* Sticky Bottom Action Bar */}
       {isAuthenticated && favorites.length > 0 && (
         <div className="fixed bottom-0 left-0 right-0 z-40 bg-brand-dark/95 backdrop-blur-xl border-t border-white/10 p-4 transform transition-transform duration-300 translate-y-0">
-          <div className="max-w-[1440px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="max-w-[1440px] mx-auto px-4 md:px-6 lg:px-12 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="text-sm text-brand-muted font-medium">
               <span className="text-white font-bold">{favorites.length}</span> items in favorites
             </div>
@@ -101,10 +101,10 @@ export default function FavoritesPage() {
       <Modal isOpen={browseModalOpen} onClose={() => setBrowseModalOpen(false)} title="Browse Catalog" className="max-w-2xl bg-[#1e1e1e] border border-white/10 text-white">
         <div className="grid grid-cols-2 gap-4 mt-4">
           {[
-            { title: 'Sofa Fabrics', endUse: 'sofa', icon: <ArrowRight className="h-5 w-5" /> },
-            { title: 'Curtain Fabrics', endUse: 'curtain', icon: <ArrowRight className="h-5 w-5" /> },
-            { title: 'Rugs', endUse: 'rug', icon: <ArrowRight className="h-5 w-5" /> },
-            { title: 'Wallpaper', endUse: 'wallpaper', icon: <ArrowRight className="h-5 w-5" /> }
+            { title: 'Sofa Fabrics', endUse: 'sofa', icon: <Sofa className="h-6 w-6" /> },
+            { title: 'Curtain Fabrics', endUse: 'curtain', icon: <Blinds className="h-6 w-6" /> },
+            { title: 'Rugs', endUse: 'rug', icon: <Grid className="h-6 w-6" /> },
+            { title: 'Wallpaper', endUse: 'wallpaper', icon: <ImageIcon className="h-6 w-6" /> }
           ].map((cat) => (
             <div 
               key={cat.endUse}

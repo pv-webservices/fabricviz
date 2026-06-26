@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Menu, X, Heart, User, Sparkles, LogOut, LayoutDashboard } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import AuthModal from './AuthModal';
 import { useCustomerAuth } from '../context/CustomerAuthContext';
 
@@ -45,6 +45,7 @@ export default function Navbar() {
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -84,7 +85,14 @@ export default function Navbar() {
     fetchHeaderData();
   }, []);
 
-  const isDarkText = isScrolled || mobileMenuOpen;
+  const isDarkText = 
+    isScrolled || 
+    mobileMenuOpen || 
+    location.pathname.startsWith('/category/') || 
+    location.pathname === '/sofa' || 
+    location.pathname === '/curtain' ||
+    location.pathname === '/visualizer' ||
+    location.pathname === '/favorites';
 
   return (
     <>

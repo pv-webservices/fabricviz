@@ -29,6 +29,7 @@ interface CustomerAuthContextType {
   logout: () => void;
   toggleFavorite: (fabricId: string) => Promise<void>;
   fetchFavorites: () => Promise<void>;
+  clearAllFavorites: () => Promise<void>;
 }
 
 const CustomerAuthContext = createContext<CustomerAuthContextType | undefined>(undefined);
@@ -144,6 +145,35 @@ export function CustomerAuthProvider({ children }: { children: React.ReactNode }
     }
   };
 
+  const clearAllFavorites = async () => {
+    if (!customer) return;
+    const token = localStorage.getItem('customer_token');
+    
+    // Copy current favorites to delete
+    const currentFavorites = [...favorites];
+    
+    // Optimistic UI update
+    setFavorites([]);
+    setFavoriteFabrics([]);
+    
+    try {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+      // Execute all deletions in parallel
+      await Promise.all(
+        currentFavorites.map(fabricId => 
+          fetch(`${API_URL}/api/customer/favorites/${fabricId}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` }
+          })
+        )
+      );
+    } catch (err) {
+      console.error('Clear all favorites failed', err);
+      // Revert optimistic update
+      await fetchFavorites();
+    }
+  };
+
   return (
     <CustomerAuthContext.Provider value={{
       customer,
@@ -154,7 +184,8 @@ export function CustomerAuthProvider({ children }: { children: React.ReactNode }
       login,
       logout,
       toggleFavorite,
-      fetchFavorites
+      fetchFavorites,
+      clearAllFavorites
     }}>
       {children}
     </CustomerAuthContext.Provider>

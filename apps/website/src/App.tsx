@@ -51,10 +51,8 @@ export default function App() {
                 <Route path="/catalog/:id" element={<CatalogPage />} />
                 <Route path="/collections/:id" element={<CatalogPage />} />
                 <Route path="/favorites" element={<FavoritesPage />} />
+                <Route path="/visualizer" element={<VisualizerPage />} />
               </Route>
-
-              {/* Fullscreen Routes (No Navbar/Footer) */}
-              <Route path="/visualizer" element={<VisualizerPage />} />
 
               {/* Admin Routes */}
               <Route path="/admin/login" element={<AdminLoginPage />} />

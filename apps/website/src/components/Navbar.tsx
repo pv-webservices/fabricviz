@@ -3,7 +3,6 @@ import { Menu, X, Heart, User, Sparkles, LogOut, LayoutDashboard } from 'lucide-
 import { motion, AnimatePresence } from 'motion/react';
 import { Link, useNavigate } from 'react-router-dom';
 import AuthModal from './AuthModal';
-import FavoritesDrawer from './FavoritesDrawer';
 import { useCustomerAuth } from '../context/CustomerAuthContext';
 
 interface MenuItem {
@@ -43,9 +42,9 @@ export default function Navbar() {
 
   const { isAuthenticated, customer, logout, favorites } = useCustomerAuth();
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [favoritesDrawerOpen, setFavoritesDrawerOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -175,7 +174,7 @@ export default function Navbar() {
           {/* Icons & CTAs */}
           <div className="flex items-center gap-2 sm:gap-4 ml-auto lg:ml-4">
             <button 
-              onClick={() => isAuthenticated ? setFavoritesDrawerOpen(true) : setAuthModalOpen(true)}
+              onClick={() => isAuthenticated ? navigate('/favorites') : setAuthModalOpen(true)}
               aria-label="Favorites" 
               className={`relative p-2 transition-colors ${!isDarkText ? 'text-white group-hover:text-brand-text' : 'text-brand-text hover:text-brand-accent'}`}
             >
@@ -209,12 +208,12 @@ export default function Navbar() {
                       <p className="text-xs text-brand-dark/50 font-semibold uppercase tracking-wider mb-0.5">Signed in as</p>
                       <p className="text-sm font-medium truncate">{customer?.full_name}</p>
                     </div>
-                    <button onClick={() => { setUserDropdownOpen(false); setFavoritesDrawerOpen(true); }} className="w-full text-left px-4 py-2 text-sm hover:bg-brand-dark/5 flex items-center gap-2 transition-colors">
+                    <button onClick={() => { setUserDropdownOpen(false); navigate('/favorites'); }} className="w-full text-left px-4 py-2 text-sm hover:bg-brand-dark/5 flex items-center gap-2 transition-colors">
                       <Heart size={16} /> My Favorites
                     </button>
-                    <a href={import.meta.env.VITE_APP_URL || '/login'} className="w-full px-4 py-2 text-sm hover:bg-brand-dark/5 flex items-center gap-2 transition-colors">
+                    <button onClick={() => { setUserDropdownOpen(false); navigate('/visualizer'); }} className="w-full text-left px-4 py-2 text-sm hover:bg-brand-dark/5 flex items-center gap-2 transition-colors">
                       <LayoutDashboard size={16} /> AI Visualizer
-                    </a>
+                    </button>
                     <button onClick={() => { setUserDropdownOpen(false); logout(); }} className="w-full text-left px-4 py-2 text-sm text-brand-terracotta hover:bg-brand-terracotta/5 flex items-center gap-2 transition-colors border-t border-brand-dark/5 mt-1 pt-3">
                       <LogOut size={16} /> Sign Out
                     </button>
@@ -223,9 +222,9 @@ export default function Navbar() {
               </AnimatePresence>
             </div>
 
-            <a href={import.meta.env.VITE_APP_URL || '/login'} className="hidden sm:inline-flex items-center gap-2 bg-brand-terracotta text-white px-5 py-2 text-[10px] font-bold tracking-widest uppercase rounded-sm transition-colors hover:opacity-90 ml-2">
+            <Link to="/visualizer" className="hidden sm:inline-flex items-center gap-2 bg-brand-terracotta text-white px-5 py-2 text-[10px] font-bold tracking-widest uppercase rounded-sm transition-colors hover:opacity-90 ml-2">
               <Sparkles size={14} /> VISUALIZER
-            </a>
+            </Link>
           </div>
         </div>
       </nav>
@@ -279,16 +278,15 @@ export default function Navbar() {
               ))}
             </ul>
             <div className="mt-4 mb-12">
-              <a href={import.meta.env.VITE_APP_URL || '/login'} className="w-full flex justify-center items-center gap-2 bg-brand-terracotta text-white py-4 font-bold tracking-widest text-[10px] uppercase rounded-sm">
+              <Link to="/visualizer" onClick={() => setMobileMenuOpen(false)} className="w-full flex justify-center items-center gap-2 bg-brand-terracotta text-white py-4 font-bold tracking-widest text-[10px] uppercase rounded-sm">
                 <Sparkles size={14} /> VISUALIZER
-              </a>
+              </Link>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
       <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
-      <FavoritesDrawer isOpen={favoritesDrawerOpen} onClose={() => setFavoritesDrawerOpen(false)} />
     </>
   );
 }

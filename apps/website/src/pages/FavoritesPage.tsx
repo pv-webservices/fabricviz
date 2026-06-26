@@ -9,7 +9,7 @@ import AuthModal from '@/components/AuthModal';
 export default function FavoritesPage() {
   const navigate = useNavigate();
   const { isAuthenticated, favorites, favoriteFabrics, toggleFavorite } = useCustomerAuth();
-  const [authModalOpen, setAuthModalOpen] = useState(!isAuthenticated);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
   const [browseModalOpen, setBrowseModalOpen] = useState(false);
 
   // If the user is unauthenticated and closes the modal, they see an empty state

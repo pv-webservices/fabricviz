@@ -8,8 +8,8 @@ import AuthModal from '@/components/AuthModal';
 
 export default function VisualizerPage() {
   const navigate = useNavigate();
-  const { isAuthenticated, favoriteFabrics, favorites, clearAllFavorites } = useCustomerAuth();
-  const [authModalOpen, setAuthModalOpen] = useState(!isAuthenticated);
+  const { isAuthenticated, loading, favoriteFabrics, favorites, clearAllFavorites } = useCustomerAuth();
+  const [authModalOpen, setAuthModalOpen] = useState(false);
   const [browseModalOpen, setBrowseModalOpen] = useState(false);
   const [showRooms, setShowRooms] = useState(false);
   
@@ -24,12 +24,12 @@ export default function VisualizerPage() {
   const [renderedImage, setRenderedImage] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!loading && !isAuthenticated) {
       setAuthModalOpen(true);
-    } else {
+    } else if (isAuthenticated) {
       setAuthModalOpen(false);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, loading]);
 
   useEffect(() => {
     const fetchRooms = async () => {
@@ -85,6 +85,10 @@ export default function VisualizerPage() {
     setRenderedImage(null);
     setShowRooms(false);
   };
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center bg-brand-bg"><Loader2 className="animate-spin text-brand-muted" size={32} /></div>;
+  }
 
   if (!isAuthenticated) {
     return (

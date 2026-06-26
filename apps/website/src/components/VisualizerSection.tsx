@@ -70,7 +70,7 @@ export default function VisualizerSection() {
   }
 
   const content = data || DEFAULT_DATA;
-  const ctaUrl = content.cta_link || import.meta.env.VITE_APP_URL || '/login';
+  const ctaUrl = content.cta_link || '/visualizer';
   
   return (
     <section className="relative bg-white overflow-hidden py-16 md:py-24">
@@ -168,12 +168,12 @@ export default function VisualizerSection() {
 
           {/* CTA & Secondary Link */}
           <div className="flex flex-col items-start gap-4 mt-auto md:mt-0 pt-4">
-            <a
-              href={ctaUrl}
+            <Link
+              to={ctaUrl}
               className="bg-brand-terracotta text-white px-8 py-4 uppercase font-bold tracking-widest text-xs rounded-sm hover:bg-brand-terracotta/90 transition-colors inline-block"
             >
               {content.cta_text || 'LAUNCH THE VISUALIZER →'}
-            </a>
+            </Link>
 
             {content.secondary_link_text && (
               <Link

@@ -109,7 +109,7 @@ export default function VisualizerPage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-brand-bg">
+      <div className="min-h-screen flex items-center justify-center bg-[#f2ede4]">
         <AuthModal isOpen={authModalOpen} onClose={() => {
           setAuthModalOpen(false);
           navigate('/');
@@ -120,11 +120,27 @@ export default function VisualizerPage() {
 
   const assignedCount = Object.keys(assignments).length;
   const activeAreaObj = STYLE_AREAS.find(a => a.id === activeArea);
-  // Filter favorites by the category of the active area (falling back to empty array if none)
-  const filteredFavorites = activeAreaObj ? favoriteFabrics.filter((f: any) => f.category && f.category.toLowerCase() === activeAreaObj.category.toLowerCase()) : [];
+  
+  // Advanced Category Matching
+  const filteredFavorites = activeAreaObj ? favoriteFabrics.filter((f: any) => {
+    if (!f.category) return false;
+    const cat = f.category.toLowerCase();
+    const target = activeAreaObj.category.toLowerCase(); // 'sofa', 'curtain', 'rug', 'wallpaper'
+    
+    // 'both' typically covers sofa and curtain
+    if (cat === 'both' && (target === 'sofa' || target === 'curtain')) return true;
+    
+    // Check for synonyms or direct includes
+    if (target === 'curtain' && (cat.includes('curtain') || cat.includes('drapery') || cat.includes('blind'))) return true;
+    if (target === 'sofa' && (cat.includes('sofa') || cat.includes('upholstery') || cat.includes('cushion') || cat.includes('headboard'))) return true;
+    if (target === 'rug' && (cat.includes('rug') || cat.includes('floor') || cat.includes('carpet'))) return true;
+    if (target === 'wallpaper' && (cat.includes('wallpaper') || cat.includes('wall'))) return true;
+    
+    return cat.includes(target) || target.includes(cat);
+  }) : [];
 
   return (
-    <div className="min-h-screen pt-[70px] md:pt-[92px] flex flex-col font-sans bg-brand-bg text-brand-text">
+    <div className="min-h-screen pt-[70px] md:pt-[92px] flex flex-col font-sans bg-[#f2ede4] text-brand-text">
       <div className="flex-1 flex flex-col">
         
         {/* Top Header Actions (History, Start over) */}
@@ -220,7 +236,7 @@ export default function VisualizerPage() {
                   <span className="text-xs text-brand-muted font-semibold">{assignedCount}/{STYLE_AREAS.length} assigned</span>
                 </div>
                 
-                <div className="flex overflow-x-auto gap-4 md:gap-6 pb-4 custom-scrollbar snap-x">
+                <div className="flex flex-wrap justify-center gap-4 md:gap-6 pb-4">
                   {STYLE_AREAS.map(area => {
                     const isAssigned = !!assignments[area.id];
                     const fabric = assignments[area.id];
@@ -229,7 +245,7 @@ export default function VisualizerPage() {
                       <div 
                         key={area.id} 
                         onClick={() => setActiveArea(area.id)}
-                        className="flex flex-col items-center gap-2 cursor-pointer flex-none snap-start group w-[72px]"
+                        className="flex flex-col items-center gap-2 cursor-pointer group w-[72px] p-[2px]"
                       >
                         <div className={`w-16 h-16 rounded-full flex items-center justify-center relative transition-transform group-hover:scale-105 ${isAssigned ? 'bg-brand-terracotta/10 border-2 border-brand-terracotta' : 'bg-white border border-black/10 hover:border-black/30 shadow-sm'}`}>
                           {isAssigned ? (

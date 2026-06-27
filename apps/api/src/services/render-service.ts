@@ -1,6 +1,7 @@
 import { Pool } from 'pg';
 import { Queue } from 'bullmq';
-import { CreateRenderInput } from '../validators/render-validators';
+import { CreateRenderInput, isMultiAreaInput, AreaAssignmentInput } from '../validators/render-validators';
+import { buildRenderPrompt, AreaAssignment } from '../lib/render-prompt-library';
 
 export interface RenderStatusResult {
   jobId: string;
@@ -21,16 +22,155 @@ export async function createRenderJob(
   renderQueue: Queue,
   data: CreateRenderInput,
   accessCodeId?: string,
-): Promise<{ jobId: string; visualizationId: string }> {
+): Promise<{ jobId: string; visualizationId: string; areasCount: number }> {
+
+  // ── Multi-area flow ─────────────────────────────────────────────────────────
+  if (isMultiAreaInput(data)) {
+    const assignments = data.areaAssignments;
+
+    // 1. Validate all fabricIds in bulk
+    const fabricIds = assignments.map((a) => a.fabricId);
+    const fabricCheck = await db.query(
+      `SELECT id FROM fabrics WHERE id = ANY($1::uuid[]) AND active = true`,
+      [fabricIds],
+    );
+    if (fabricCheck.rowCount !== fabricIds.length) {
+      throw new Error('One or more fabrics were not found or are inactive');
+    }
+
+    // 2. Validate roomId if provided
+    if (data.roomId) {
+      const roomCheck = await db.query(
+        `SELECT image_url FROM predefined_rooms WHERE id = $1 AND active = true`,
+        [data.roomId],
+      );
+      if (roomCheck.rowCount === 0) {
+        throw new Error('Predefined room not found or inactive');
+      }
+    }
+
+    // 3. Check credits — exactly 1 credit required per render job
+    if (accessCodeId) {
+      const creditCheck = await db.query(
+        `SELECT credit_limit FROM access_codes WHERE id = $1`,
+        [accessCodeId],
+      );
+      if (creditCheck.rowCount === 0) {
+        throw new Error('Access code not found');
+      }
+      if ((creditCheck.rows[0].credit_limit as number) < 1) {
+        throw new Error('Insufficient credits');
+      }
+    }
+
+    // 4. Build composed prompt
+    const typedAssignments: AreaAssignment[] = assignments.map((a: AreaAssignmentInput) => ({
+      areaKey: a.areaKey,
+      fabricId: a.fabricId,
+      fabricName: a.fabricName,
+      fabricCode: a.fabricCode,
+      fabricColorDescription: a.fabricColorDescription,
+      fabricTextureDescription: a.fabricTextureDescription,
+      fabricImageUrl: a.fabricImageUrl,
+    }));
+    const model = data.model ?? 'fast';
+    const composedPrompt = buildRenderPrompt(typedAssignments, model);
+
+    // 5. Create visualization record with multi-area columns
+    const firstFabricId = assignments[0].fabricId;
+    const firstAreaKey = assignments[0].areaKey;
+
+    // Map areaKey to valid legacy object_type to satisfy visualizations_object_type_check
+    let legacyObjectType = 'sofa';
+    if (firstAreaKey.includes('curtain')) legacyObjectType = 'curtain';
+    else if (firstAreaKey.includes('rug') || firstAreaKey.includes('floor')) legacyObjectType = 'rug';
+    else if (firstAreaKey.includes('wall')) legacyObjectType = 'wallpaper';
+
+    const visResult = await db.query(
+      `INSERT INTO visualizations
+         (access_code_id, fabric_id, room_id, uploaded_photo_url, object_type, source_type, status,
+          area_assignments, model, composed_prompt, areas_count)
+       VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7, $8, $9, $10)
+       RETURNING id`,
+      [
+        accessCodeId ?? null,
+        firstFabricId,
+        data.roomId ?? null,
+        data.uploadedPhotoUrl ?? null,
+        legacyObjectType,
+        data.sourceType,
+        JSON.stringify(assignments),
+        model,
+        composedPrompt,
+        assignments.length,
+      ],
+    );
+    const visualizationId: string = visResult.rows[0].id;
+
+    // 6. Create render_job record
+    const jobResult = await db.query(
+      `INSERT INTO render_jobs (visualization_id, status, model)
+       VALUES ($1, 'queued', $2)
+       RETURNING id`,
+      [visualizationId, model],
+    );
+    const renderJobId: string = jobResult.rows[0].id;
+
+    // 7. Update visualization with render_job_id
+    await db.query(
+      `UPDATE visualizations SET render_job_id = $1 WHERE id = $2`,
+      [renderJobId, visualizationId],
+    );
+
+    // 8. Push to BullMQ queue with full multi-area payload
+    const bullJob = await renderQueue.add(
+      'render',
+      {
+        renderJobId,
+        visualizationId,
+        model,
+        areaAssignments: typedAssignments,
+        composedPrompt,
+        roomId: data.roomId,
+        uploadedPhotoUrl: data.uploadedPhotoUrl,
+        sourceType: data.sourceType,
+        // Legacy compat fields (first area's fabric/key)
+        fabricId: firstFabricId,
+        objectType: firstAreaKey,
+      },
+      {
+        jobId: renderJobId,
+        attempts: 2,
+        backoff: { type: 'exponential', delay: 5000 },
+      },
+    );
+
+    if (bullJob.id) {
+      await db.query(`UPDATE render_jobs SET queue_job_id = $1 WHERE id = $2`, [bullJob.id, renderJobId]);
+    }
+
+    return { jobId: renderJobId, visualizationId, areasCount: assignments.length };
+  }
+
+  // ── Legacy single-fabric flow (backward compat) ────────────────────────────
+  const legacyFabricId = (data as { fabricId: string }).fabricId;
+  const legacyObjectType = (data as { objectType: string }).objectType;
+
   // 1. Verify fabric exists
-  const fabricCheck = await db.query(`SELECT id FROM fabrics WHERE id = $1 AND active = true`, [data.fabricId]);
+  const fabricCheck = await db.query(
+    `SELECT id FROM fabrics WHERE id = $1 AND active = true`,
+    [legacyFabricId],
+  );
   if (fabricCheck.rowCount === 0) {
     throw new Error('Fabric not found or inactive');
   }
 
   // 2. Verify room exists (if predefined)
   if (data.roomId) {
-    const roomCheck = await db.query(`SELECT image_url FROM predefined_rooms WHERE id = $1 AND active = true`, [data.roomId]);
+    const roomCheck = await db.query(
+      `SELECT image_url FROM predefined_rooms WHERE id = $1 AND active = true`,
+      [data.roomId],
+    );
     if (roomCheck.rowCount === 0) {
       throw new Error('Predefined room not found or inactive');
     }
@@ -42,27 +182,27 @@ export async function createRenderJob(
      VALUES ($1, $2, $3, $4, $5, $6, 'pending') RETURNING id`,
     [
       accessCodeId ?? null,
-      data.fabricId,
+      legacyFabricId,
       data.roomId ?? null,
       data.uploadedPhotoUrl ?? null,
-      data.objectType,
+      legacyObjectType,
       data.sourceType,
-    ]
+    ],
   );
-  const visualizationId = visResult.rows[0].id;
+  const visualizationId: string = visResult.rows[0].id;
 
   // 4. Create render_job record
   const jobResult = await db.query(
     `INSERT INTO render_jobs (visualization_id, status)
      VALUES ($1, 'queued') RETURNING id`,
-    [visualizationId]
+    [visualizationId],
   );
-  const renderJobId = jobResult.rows[0].id;
+  const renderJobId: string = jobResult.rows[0].id;
 
   // 5. Update visualization with render_job_id
   await db.query(
     `UPDATE visualizations SET render_job_id = $1 WHERE id = $2`,
-    [renderJobId, visualizationId]
+    [renderJobId, visualizationId],
   );
 
   // 6. Push to BullMQ queue
@@ -71,27 +211,23 @@ export async function createRenderJob(
     {
       renderJobId,
       visualizationId,
-      fabricId: data.fabricId,
+      fabricId: legacyFabricId,
       roomId: data.roomId,
       uploadedPhotoUrl: data.uploadedPhotoUrl,
-      objectType: data.objectType,
+      objectType: legacyObjectType,
     },
     {
-      jobId: renderJobId, // ensure idempotency
-      attempts: 2,        // allow 1 retry
-      backoff: {
-        type: 'exponential',
-        delay: 5000,
-      },
-    }
+      jobId: renderJobId,
+      attempts: 2,
+      backoff: { type: 'exponential', delay: 5000 },
+    },
   );
 
-  // 7. Update render_job with the queue_job_id
   if (bullJob.id) {
     await db.query(`UPDATE render_jobs SET queue_job_id = $1 WHERE id = $2`, [bullJob.id, renderJobId]);
   }
 
-  return { jobId: renderJobId, visualizationId };
+  return { jobId: renderJobId, visualizationId, areasCount: 1 };
 }
 
 export async function getRenderStatus(db: Pool, jobId: string): Promise<RenderStatusResult | null> {
@@ -111,7 +247,7 @@ export async function getRenderStatus(db: Pool, jobId: string): Promise<RenderSt
      FROM render_jobs rj
      JOIN visualizations v ON rj.visualization_id = v.id
      WHERE rj.id = $1`,
-    [jobId]
+    [jobId],
   );
 
   if (result.rowCount === 0) return null;

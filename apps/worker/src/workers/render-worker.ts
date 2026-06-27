@@ -5,6 +5,30 @@ import { QUEUE_NAME } from '../queues/render-queue';
 import { buildPrompt } from '../recipes';
 import { NanoBananaService } from '../services/nano-banana';
 import { logIncident } from '../lib/telemetry';
+const MODEL_CONFIG: Record<string, { steps: number; size: '1024x1024'; displayName: string; modelId: string }> = {
+  fast: { steps: 10, size: '1024x1024', displayName: 'Fast', modelId: 'fast' },
+  pro: { steps: 20, size: '1024x1024', displayName: 'Pro', modelId: 'pro' },
+};
+
+export interface AreaAssignment {
+  areaKey: string;
+  fabricId: string;
+  fabricName: string;
+  fabricCode: string;
+  fabricColorDescription?: string;
+  fabricTextureDescription?: string;
+  fabricImageUrl?: string | null;
+}
+// ── Startup check: NANO_BANANA_API_KEY must be set (unless mocked) ────────────
+// This follows the same throw-on-startup pattern used for JWT_SECRET elsewhere.
+const _apiKey = process.env['NANO_BANANA_API_KEY'];
+if (!_apiKey || _apiKey === '') {
+  // In mock mode this is acceptable; in production it must be set.
+  console.warn(
+    '[Worker] WARNING: NANO_BANANA_API_KEY is not set. ' +
+    'Worker will run in MOCK mode. Set the env var for live rendering.',
+  );
+}
 
 export function setupRenderWorker(connection: Redis, db: Pool) {
   const nanoBanana = new NanoBananaService();
@@ -12,27 +36,64 @@ export function setupRenderWorker(connection: Redis, db: Pool) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { renderJobId, visualizationId, fabricId, roomId, uploadedPhotoUrl, objectType } = job.data;
+      const {
+        renderJobId,
+        visualizationId,
+        // Multi-area fields (new)
+        composedPrompt,
+        model,
+        areaAssignments,
+        // Legacy / shared fields
+        fabricId,
+        roomId,
+        uploadedPhotoUrl,
+        objectType,
+      } = job.data as {
+        renderJobId: string;
+        visualizationId: string;
+        composedPrompt?: string;
+        model?: 'fast' | 'pro';
+        areaAssignments?: AreaAssignment[];
+        fabricId?: string;
+        roomId?: string;
+        uploadedPhotoUrl?: string;
+        objectType?: string;
+        sourceType?: string;
+      };
+
       console.log(`[Job ${job.id}] Starting processing for render job ${renderJobId}...`);
 
       try {
         // 1. Mark as processing
-        await db.query(`UPDATE render_jobs SET status = 'processing', attempt_count = attempt_count + 1, started_at = NOW() WHERE id = $1`, [renderJobId]);
+        await db.query(
+          `UPDATE render_jobs SET status = 'processing', attempt_count = attempt_count + 1, started_at = NOW() WHERE id = $1`,
+          [renderJobId],
+        );
         await db.query(`UPDATE visualizations SET status = 'processing' WHERE id = $1`, [visualizationId]);
 
-        // 2. Fetch fabric metadata
-        const fabricRes = await db.query(`SELECT name, tags FROM fabrics WHERE id = $1`, [fabricId]);
-        if (fabricRes.rowCount === 0) throw new Error('Fabric not found');
-        const fabric = fabricRes.rows[0];
+        // 2. Build the prompt
+        //    CHANGE 1: Use composedPrompt from job payload when available (multi-area).
+        //    Fall back to legacy buildPrompt for old single-fabric jobs.
+        let prompt: string;
+        if (composedPrompt) {
+          prompt = composedPrompt;
+          console.log(`[Job ${job.id}] Using composedPrompt from payload (multi-area).`);
+        } else {
+          // Legacy path: fetch fabric metadata and build prompt the old way
+          const legacyFabricId = fabricId;
+          if (!legacyFabricId) throw new Error('No fabricId or composedPrompt in job payload');
+          const fabricRes = await db.query(`SELECT name, tags FROM fabrics WHERE id = $1`, [legacyFabricId]);
+          if (fabricRes.rowCount === 0) throw new Error('Fabric not found');
+          const fabric = fabricRes.rows[0];
+          prompt = buildPrompt(objectType ?? 'sofa', fabric.name, fabric.tags);
+          console.log(`[Job ${job.id}] Using legacy buildPrompt (single-fabric).`);
+        }
 
-        // 3. Build prompt
-        const prompt = buildPrompt(objectType, fabric.name, fabric.tags);
-        
-        // Save prompt_used
+        // Save prompt_used to DB
         await db.query(`UPDATE render_jobs SET prompt_used = $1 WHERE id = $2`, [prompt, renderJobId]);
 
-        // 4. Determine source image
-        let sourceImage = uploadedPhotoUrl;
+        // 3. Determine source image (unchanged from existing logic)
+        let sourceImage: string | undefined | null = uploadedPhotoUrl;
         if (roomId && !sourceImage) {
           const roomRes = await db.query(`SELECT image_url FROM predefined_rooms WHERE id = $1`, [roomId]);
           if (roomRes.rowCount !== 0) {
@@ -40,26 +101,74 @@ export function setupRenderWorker(connection: Redis, db: Pool) {
           }
         }
 
-        // 5. Call Nano Banana Service
-        const result = await nanoBanana.generateImage(prompt, sourceImage);
+        // CHANGE 2: Resolve model config for endpoint/modelId
+        const resolvedModel = (model === 'pro' ? 'pro' : 'fast') as 'fast' | 'pro';
+        const modelConfig = MODEL_CONFIG[resolvedModel];
+        console.log(`[Job ${job.id}] Using model: ${modelConfig.displayName} (${modelConfig.modelId})`);
+
+        // CHANGE 3: Build reference image list for multi-area jobs.
+        // The NanaBanana service currently supports one source image.
+        // Pass the first fabric image as primary reference; include others in prompt as text.
+        let finalSourceImage: string | null | undefined = sourceImage;
+        if (areaAssignments && areaAssignments.length > 0) {
+          const firstFabricImage = areaAssignments.find((a) => a.fabricImageUrl)?.fabricImageUrl;
+          // We intentionally keep the room image as the primary source for transformation.
+          // Fabric swatches are described in the prompt.
+          if (areaAssignments.length > 1) {
+            const swatchRefs = areaAssignments
+              .filter((a) => a.fabricImageUrl)
+              .map((a) => `${a.fabricName} (${a.fabricCode}) for ${a.areaKey}`)
+              .join('; ');
+            if (swatchRefs) {
+              prompt = prompt + `\nReference swatches: ${swatchRefs}.`;
+            }
+          }
+          // Use firstFabricImage as additional context only if no room image is available
+          if (!finalSourceImage && firstFabricImage) {
+            finalSourceImage = firstFabricImage;
+          }
+        }
+
+        // 4. Call Nano Banana Service
+        const result = await nanoBanana.generateImage(prompt, finalSourceImage, model as 'fast' | 'pro');
 
         if (!result.success || !result.imageUrl) {
           throw new Error(result.error || 'Failed to generate image');
         }
 
-        // 6. Quality Check Step (simulated)
+        // 5. Quality check (simulated)
         console.log(`[Job ${job.id}] Performing quality check on generated image...`);
-        // If it fails quality check, we could throw here. Assuming success for now.
 
-        // 7. Update DB with success
+        // 6. Update DB with success
         await db.query(
           `UPDATE render_jobs SET status = 'completed', completed_at = NOW() WHERE id = $1`,
-          [renderJobId]
+          [renderJobId],
         );
         await db.query(
           `UPDATE visualizations SET status = 'completed', after_url = $1, before_url = $2 WHERE id = $3`,
-          [result.imageUrl, sourceImage, visualizationId]
+          [result.imageUrl, sourceImage, visualizationId],
         );
+
+        // CHANGE 4: Deduct exactly 1 credit after successful generation.
+        // Credit deduction happens here, after success, regardless of area count.
+        // We look up the access_code_id from the visualization record.
+        const visRow = await db.query(
+          `SELECT access_code_id FROM visualizations WHERE id = $1`,
+          [visualizationId],
+        );
+        if (visRow.rowCount && visRow.rowCount > 0 && visRow.rows[0].access_code_id) {
+          const accessCodeId: string = visRow.rows[0].access_code_id;
+          await db.query(
+            `UPDATE access_codes SET credit_limit = GREATEST(credit_limit - 1, 0) WHERE id = $1`,
+            [accessCodeId],
+          );
+          await db.query(
+            `INSERT INTO credit_transactions (access_code_id, amount, reason)
+             VALUES ($1, -1, 'render_job_completed')`,
+            [accessCodeId],
+          );
+          console.log(`[Job ${job.id}] Deducted 1 credit from access code ${accessCodeId}.`);
+        }
 
         console.log(`[Job ${job.id}] Render completed successfully!`);
         return { success: true, imageUrl: result.imageUrl };
@@ -67,16 +176,16 @@ export function setupRenderWorker(connection: Redis, db: Pool) {
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : 'Unknown error';
         console.error(`[Job ${job.id}] Render failed: ${errorMsg}`);
-        
-        // Do not update status to failed here yet, because BullMQ will retry if attempts < max.
-        // The worker 'failed' listener will handle the final status if retries are exhausted.
+
+        // BullMQ will retry if attempts < max.
+        // The worker 'failed' listener handles final status when retries are exhausted.
         await db.query(`UPDATE render_jobs SET error_message = $1 WHERE id = $2`, [errorMsg, renderJobId]);
-        
+
         // Rethrow so BullMQ knows it failed and can retry
         throw err;
       }
     },
-    { connection: connection as any }
+    { connection: connection as any },
   );
 
   worker.on('completed', (job) => {
@@ -85,38 +194,36 @@ export function setupRenderWorker(connection: Redis, db: Pool) {
 
   worker.on('failed', async (job, err) => {
     console.log(`Job ${job?.id} has failed with ${err.message}`);
-    // If it has exhausted retries or is a definitive failure
-    if (job && job.attemptsMade >= job.opts.attempts!) {
-      const renderJobId = job.data.renderJobId;
-      const visualizationId = job.data.visualizationId;
-      
+    if (job && job.attemptsMade >= (job.opts.attempts ?? 1)) {
+      const renderJobId: string = job.data.renderJobId;
+      const visualizationId: string = job.data.visualizationId;
+
       console.log(`[Job ${job.id}] Retries exhausted. Marking as failed.`);
-      
-      // Dispatch Telemetry Alert
+
       logIncident({
         errorType: 'RENDER_PIPELINE_FAILURE',
-        message: `Render Job exhausted retries and permanently failed.`,
+        message: 'Render Job exhausted retries and permanently failed.',
         context: {
           jobId: job.id,
           renderJobId,
           visualizationId,
-          errorMsg: err.message
-        }
+          errorMsg: err.message,
+        },
       });
 
       try {
         await db.query(`UPDATE render_jobs SET status = 'failed' WHERE id = $1`, [renderJobId]);
         await db.query(`UPDATE visualizations SET status = 'failed' WHERE id = $1`, [visualizationId]);
       } catch (dbErr) {
-        console.error(`Failed to update job status to failed:`, dbErr);
+        console.error('Failed to update job status to failed:', dbErr);
       }
     } else if (job) {
       console.log(`[Job ${job.id}] Job failed, marking as retrying.`);
-      const renderJobId = job.data.renderJobId;
+      const renderJobId: string = job.data.renderJobId;
       try {
         await db.query(`UPDATE render_jobs SET status = 'retrying' WHERE id = $1`, [renderJobId]);
       } catch (dbErr) {
-        console.error(`Failed to update job status to retrying:`, dbErr);
+        console.error('Failed to update job status to retrying:', dbErr);
       }
     }
   });

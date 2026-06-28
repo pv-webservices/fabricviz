@@ -1,5 +1,6 @@
 import { Pool } from 'pg';
 import type { CreateRoomInput, UpdateRoomInput, RoomQueryInput } from '../validators/room-validators';
+import { toPublicUrl } from '../lib/url-helpers';
 
 export interface RoomRow {
   id: string;
@@ -72,8 +73,8 @@ export async function createRoom(
      RETURNING *`,
     [
       data.name,
-      data.imageUrl,
-      data.thumbnailUrl ?? null,
+      toPublicUrl(data.imageUrl),
+      data.thumbnailUrl ? toPublicUrl(data.thumbnailUrl) : null,
       data.endUse,
       data.displayOrder,
       data.active,
@@ -89,8 +90,8 @@ export async function updateRoom(
 ): Promise<RoomRow | null> {
   const fieldMap: Record<string, { column: string; value: unknown }> = {
     name: { column: 'name', value: data.name },
-    imageUrl: { column: 'image_url', value: data.imageUrl },
-    thumbnailUrl: { column: 'thumbnail_url', value: data.thumbnailUrl },
+    imageUrl: { column: 'image_url', value: data.imageUrl ? toPublicUrl(data.imageUrl) : data.imageUrl },
+    thumbnailUrl: { column: 'thumbnail_url', value: data.thumbnailUrl ? toPublicUrl(data.thumbnailUrl) : data.thumbnailUrl },
     endUse: { column: 'end_use', value: data.endUse },
     displayOrder: { column: 'display_order', value: data.displayOrder },
     active: { column: 'active', value: data.active },

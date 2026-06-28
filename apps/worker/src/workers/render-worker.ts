@@ -111,7 +111,6 @@ export function setupRenderWorker(connection: Redis, db: Pool) {
         // Build reference image list
         const referenceImageUrls: string[] = fabricSwatchUrls ?? [];
         if (referenceImageUrls.length === 0 && areaAssignments && areaAssignments.length > 0) {
-          const firstFabricImage = areaAssignments.find((a) => a.fabricImageUrl)?.fabricImageUrl;
           for (const a of areaAssignments) {
             if (a.fabricImageUrl && !referenceImageUrls.includes(a.fabricImageUrl)) {
               referenceImageUrls.push(a.fabricImageUrl);
@@ -126,9 +125,15 @@ export function setupRenderWorker(connection: Redis, db: Pool) {
               prompt = prompt + `\nReference swatches: ${swatchRefs}.`;
             }
           }
-          if (!finalSourceImage && firstFabricImage) {
-            finalSourceImage = firstFabricImage;
-          }
+        }
+
+        if (!finalSourceImage) {
+          throw new Error(
+            'Render aborted: no room image could be resolved. ' +
+            `roomImageUrl=${job.data.roomImageUrl ?? 'not provided'}, ` +
+            `uploadedPhotoUrl=${job.data.uploadedPhotoUrl ?? 'not provided'}, ` +
+            `roomId=${job.data.roomId ?? 'not provided'}`,
+          );
         }
 
         // LOG 1 - Before building the API call payload

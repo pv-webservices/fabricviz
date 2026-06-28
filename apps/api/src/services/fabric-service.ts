@@ -1,6 +1,7 @@
 import { Pool } from 'pg';
 import type { CreateFabricInput, UpdateFabricInput, FabricQueryInput } from '../validators/fabric-validators';
 import type { BulkImportInput } from '../validators/fabric-validators';
+import { toPublicUrl } from '../lib/url-helpers';
 
 export interface FabricRow {
   id: string;
@@ -105,8 +106,8 @@ export async function createFabric(
       data.collectionId,
       data.name,
       data.code,
-      data.swatchUrl ?? null,
-      data.textureUrl ?? null,
+      data.swatchUrl ? toPublicUrl(data.swatchUrl) : null,
+      data.textureUrl ? toPublicUrl(data.textureUrl) : null,
       data.colorFamily ?? null,
       data.quality ?? null,
       data.tags ?? null,
@@ -131,8 +132,8 @@ export async function updateFabric(
     collectionId: { column: 'collection_id', value: data.collectionId },
     name: { column: 'name', value: data.name },
     code: { column: 'code', value: data.code },
-    swatchUrl: { column: 'swatch_url', value: data.swatchUrl },
-    textureUrl: { column: 'texture_url', value: data.textureUrl },
+    swatchUrl: { column: 'swatch_url', value: data.swatchUrl ? toPublicUrl(data.swatchUrl) : data.swatchUrl },
+    textureUrl: { column: 'texture_url', value: data.textureUrl ? toPublicUrl(data.textureUrl) : data.textureUrl },
     colorFamily: { column: 'color_family', value: data.colorFamily },
     quality: { column: 'quality', value: data.quality },
     tags: { column: 'tags', value: data.tags },
@@ -203,8 +204,8 @@ export async function bulkCreateFabrics(
             f.collectionId,
             f.name,
             f.code,
-            f.swatchUrl ?? null,
-            f.textureUrl ?? null,
+            f.swatchUrl ? toPublicUrl(f.swatchUrl) : null,
+            f.textureUrl ? toPublicUrl(f.textureUrl) : null,
             f.colorFamily ?? null,
             f.quality ?? null,
             f.tags ?? null,

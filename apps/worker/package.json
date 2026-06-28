@@ -13,6 +13,7 @@
     "@fabricviz/domain": "workspace:*",
     "@types/pg": "^8.11.6",
     "bullmq": "^5.7.8",
+    "dotenv": "^17.4.2",
     "ioredis": "^5.4.1",
     "pg": "^8.11.5",
     "vitest": "^1.6.0"

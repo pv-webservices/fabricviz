@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "db:fix-minio-urls": "tsx src/db/scripts/fix-minio-urls.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1071.0",

@@ -10,6 +10,10 @@ const MINIO_INTERNAL_HOST = process.env['MINIO_INTERNAL_HOST'] || 'minio:9000';
 const MINIO_PUBLIC_URL = process.env['MINIO_PUBLIC_URL'] || process.env['STORAGE_ENDPOINT'] || 'http://localhost:9000';
 
 function rewriteInternalUrl(url: string): string {
+  if (url.startsWith('/uploads/')) {
+    const apiUrl = process.env['API_URL'] || 'http://localhost:4000';
+    return `${apiUrl}${url}`;
+  }
   if (url.includes(MINIO_INTERNAL_HOST)) {
     const rewritten = url
       .replace(`http://${MINIO_INTERNAL_HOST}`, MINIO_PUBLIC_URL)

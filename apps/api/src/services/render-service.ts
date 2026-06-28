@@ -60,7 +60,7 @@ export async function createRenderJob(
       throw new Error('Render requires a valid room image URL. Neither a predefined room image nor an uploaded photo URL was provided.');
     }
 
-    // 3. Check credits — exactly 1 credit required per render job
+    // 3. Check credits ï¿½ exactly 1 credit required per render job
     if (accessCodeId) {
       const creditCheck = await db.query(
         `SELECT credit_limit FROM access_codes WHERE id = $1`,
@@ -119,6 +119,7 @@ export async function createRenderJob(
     if (firstAreaKey.includes('curtain')) legacyObjectType = 'curtain';
     else if (firstAreaKey.includes('rug') || firstAreaKey.includes('floor')) legacyObjectType = 'rug';
     else if (firstAreaKey.includes('wall')) legacyObjectType = 'wallpaper';
+    else if (firstAreaKey.includes('chair')) legacyObjectType = 'chair';
 
     const visResult = await db.query(
       `INSERT INTO visualizations

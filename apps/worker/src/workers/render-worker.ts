@@ -1,4 +1,4 @@
-import { Worker, Job } from 'bullmq';
+﻿import { Worker, Job } from 'bullmq';
 import Redis from 'ioredis';
 import { Pool } from 'pg';
 import { QUEUE_NAME } from '../queues/render-queue';
@@ -193,15 +193,15 @@ export function setupRenderWorker(connection: Redis, db: Pool) {
           );
           console.log(`[Job ${job.id}] Deducted 1 credit from access code ${accessCodeId}.`);
 
-          // Enforce 50-item history limit
+          // Enforce 30-item history limit
           await db.query(
-            `WITH top_50 AS (
-               SELECT id FROM visualizations WHERE access_code_id = $1 ORDER BY created_at DESC LIMIT 50
+            `WITH top_30 AS (
+               SELECT id FROM visualizations WHERE access_code_id = $1 ORDER BY created_at DESC LIMIT 30
              )
-             DELETE FROM visualizations WHERE access_code_id = $1 AND id NOT IN (SELECT id FROM top_50)`,
+             DELETE FROM visualizations WHERE access_code_id = $1 AND id NOT IN (SELECT id FROM top_30)`,
             [accessCodeId]
           );
-          console.log(`[Job ${job.id}] Enforced 50-item history limit for access code ${accessCodeId}.`);
+          console.log(`[Job ${job.id}] Enforced 30-item history limit for access code ${accessCodeId}.`);
         }
 
         console.log(`[Job ${job.id}] Render completed successfully!`);
@@ -271,4 +271,5 @@ export function setupRenderWorker(connection: Redis, db: Pool) {
 
   return worker;
 }
+
 

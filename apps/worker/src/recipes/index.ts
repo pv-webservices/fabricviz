@@ -18,12 +18,48 @@ Ensure the pattern repeat is continuous and scaled correctly for a large drape.
 Maintain realistic window lighting from behind the curtain, sharp focus, and premium interior design aesthetic. Output quality constraint: Generate the image at a maximum resolution of 1024x1024 (1k quality). Do not exceed 1k quality.`;
 }
 
+export function getChairSeatRecipe(fabricName: string, tags: string[] = []): string {
+  const safeTags = tags || [];
+  const characteristics = safeTags.length > 0 ? `Characteristics: ${safeTags.join(', ')}.` : '';
+  return `You are a strict photorealistic image editor. I have provided a [BASE_ROOM_TO_EDIT] image and a [FABRIC_SWATCH_REFERENCE_1]. Edit the [BASE_ROOM_TO_EDIT] image to reupholster ONLY the seat cushion(s) of the chair in the image with ${fabricName} fabric. ${characteristics}
+KEEP EVERY OTHER PIXEL EXACTLY THE SAME. Keep the chair back, legs, armrests, and entire room identical. Do not generate a new room.
+The fabric must conform tightly to the seat cushion contours, displaying realistic shadow depth and natural fabric tension.
+Ensure the fabric pattern repeat scale and orientation are precisely maintained.
+Maintain realistic ambient room lighting, sharp focus, and premium interior design aesthetic. Output quality constraint: Generate the image at a maximum resolution of 1024x1024 (1k quality). Do not exceed 1k quality.`;
+}
+
+export function getChairBackRecipe(fabricName: string, tags: string[] = []): string {
+  const safeTags = tags || [];
+  const characteristics = safeTags.length > 0 ? `Characteristics: ${safeTags.join(', ')}.` : '';
+  return `You are a strict photorealistic image editor. I have provided a [BASE_ROOM_TO_EDIT] image and a [FABRIC_SWATCH_REFERENCE_1]. Edit the [BASE_ROOM_TO_EDIT] image to reupholster ONLY the back cushion(s) of the chair with ${fabricName} fabric. ${characteristics}
+KEEP EVERY OTHER PIXEL EXACTLY THE SAME. Keep the chair seat, legs, armrests, and entire room identical. Do not generate a new room.
+The fabric must conform tightly to the back cushion contours, displaying realistic shadow depth and natural fabric tension.
+Ensure the fabric pattern repeat scale and orientation are precisely maintained.
+Maintain realistic ambient room lighting, sharp focus, and premium interior design aesthetic. Output quality constraint: Generate the image at a maximum resolution of 1024x1024 (1k quality). Do not exceed 1k quality.`;
+}
+
+export function getChairAllRecipe(fabricName: string, tags: string[] = []): string {
+  const safeTags = tags || [];
+  const characteristics = safeTags.length > 0 ? `Characteristics: ${safeTags.join(', ')}.` : '';
+  return `You are a strict photorealistic image editor. I have provided a [BASE_ROOM_TO_EDIT] image and a [FABRIC_SWATCH_REFERENCE_1]. Edit the [BASE_ROOM_TO_EDIT] image to reupholster the entire chair (seat, back, and armrests if fabric-covered) with ${fabricName} fabric. ${characteristics}
+KEEP EVERY OTHER PIXEL EXACTLY THE SAME. Keep the chair legs and entire room identical. Do not generate a new room.
+The fabric wraps all upholstered surfaces, displaying realistic shadow depth and natural fabric tension.
+Ensure the fabric pattern repeat scale and orientation are precisely maintained.
+Maintain realistic ambient room lighting, sharp focus, and premium interior design aesthetic. Output quality constraint: Generate the image at a maximum resolution of 1024x1024 (1k quality). Do not exceed 1k quality.`;
+}
+
 export function buildPrompt(objectType: string, fabricName: string, tags: string[] = []): string {
   switch (objectType) {
     case 'sofa':
       return getSofaRecipe(fabricName, tags);
     case 'curtain':
       return getCurtainRecipe(fabricName, tags);
+    case 'chair_seat':
+      return getChairSeatRecipe(fabricName, tags);
+    case 'chair_back':
+      return getChairBackRecipe(fabricName, tags);
+    case 'chair_all':
+      return getChairAllRecipe(fabricName, tags);
     case 'rug':
       return `Generate a high-quality photorealistic image of a rug using ${fabricName} texture...`; // Stub for v2
     case 'wallpaper':

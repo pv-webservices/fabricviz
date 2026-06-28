@@ -4,7 +4,7 @@ import { useCustomerAuth } from '../context/CustomerAuthContext';
 import {
   ArrowLeft, Upload, Wand2, Loader2, History, RotateCcw,
   Image as ImageIcon, Sofa, Blinds, Grid, Bed, Square, Plus, Check,
-  Zap, Star,
+  Zap, Star, Trash2, X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
@@ -19,6 +19,9 @@ const STYLE_AREAS = [
   { id: 'sofa_seat',    label: 'Sofa Seat',     category: 'sofa',      icon: Sofa },
   { id: 'sofa_back',    label: 'Sofa Back',     category: 'sofa',      icon: Sofa },
   { id: 'sofa_all',     label: 'Sofa All',      category: 'sofa',      icon: Sofa },
+  { id: 'chair_seat',   label: 'Chair Seat',    category: 'sofa',      icon: Sofa },
+  { id: 'chair_back',   label: 'Chair Back',    category: 'sofa',      icon: Sofa },
+  { id: 'chair_all',    label: 'Chair (Full)',  category: 'sofa',      icon: Sofa },
   { id: 'front_curtain',label: 'Front Curtain', category: 'curtain',   icon: Blinds },
   { id: 'back_curtain', label: 'Back Curtain',  category: 'curtain',   icon: Blinds },
   { id: 'headboard',    label: 'Headboard',     category: 'sofa',      icon: Bed },
@@ -85,6 +88,10 @@ export default function VisualizerPage() {
 
   // History state
   const [historyCount, setHistoryCount] = useState<number>(0);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [historyItems, setHistoryItems] = useState<any[]>([]);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -149,9 +156,51 @@ export default function VisualizerPage() {
         setHistoryCount(json.data.total || 0);
       }
     } catch (err) {
-      console.error('Failed to fetch history', err);
+      console.error('Failed to fetch history count', err);
     }
   }, []);
+
+  const fetchHistoryList = useCallback(async () => {
+    const token = localStorage.getItem('customer_token');
+    if (!token) return;
+    setIsHistoryLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/history?limit=30`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      if (json.success && json.data) {
+        setHistoryItems(json.data.items || []);
+        setHistoryCount(json.data.total || 0);
+      }
+    } catch (err) {
+      console.error('Failed to fetch history list', err);
+    } finally {
+      setIsHistoryLoading(false);
+    }
+  }, []);
+
+  const handleDeleteHistory = async (id: string) => {
+    const token = localStorage.getItem('customer_token');
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_URL}/api/visualizations/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setHistoryItems(prev => prev.filter(item => item.id !== id));
+        setHistoryCount(prev => Math.max(0, prev - 1));
+        setConfirmDeleteId(null);
+      } else {
+        toast({ title: 'Delete Failed', description: 'Could not delete history item. Try again.', variant: 'destructive' });
+      }
+    } catch (err) {
+      console.error('Failed to delete history item', err);
+      toast({ title: 'Delete Failed', description: 'Network error. Try again.', variant: 'destructive' });
+    }
+  };
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -442,7 +491,10 @@ export default function VisualizerPage() {
 
         {/* Top Header Actions (History, Start over) */}
         <div className="max-w-5xl mx-auto w-full px-4 pt-6 pb-2 flex justify-end gap-6 text-sm font-semibold text-brand-muted">
-          <button className="flex items-center gap-2 hover:text-brand-text transition-colors">
+          <button 
+            onClick={() => { setIsHistoryOpen(true); fetchHistoryList(); }}
+            className="flex items-center gap-2 hover:text-brand-text transition-colors"
+          >
             <History size={16} /> History{' '}
             <span className="bg-brand-terracotta text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1">{historyCount}</span>
           </button>
@@ -610,7 +662,7 @@ export default function VisualizerPage() {
                     <button
                       id="model-toggle-fast"
                       onClick={() => setSelectedModel('fast')}
-                      title="Nano Banana 2.0 — faster generation, great for previews"
+                      title="Fast generation, great for previews"
                       className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold transition-colors min-h-[44px]
                         ${selectedModel === 'fast'
                           ? 'bg-brand-terracotta text-white'
@@ -618,15 +670,12 @@ export default function VisualizerPage() {
                     >
                       <Zap size={14} />
                       <span>Fast</span>
-                      <span className={`text-[10px] font-normal ${selectedModel === 'fast' ? 'text-white/70' : 'text-brand-muted/60'}`}>
-                        Nano Banana 2.0
-                      </span>
                     </button>
                     {/* Pro option */}
                     <button
                       id="model-toggle-pro"
                       onClick={() => setSelectedModel('pro')}
-                      title="Nano Banana Pro — highest quality, production renders"
+                      title="Highest quality, production renders"
                       className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold transition-colors min-h-[44px]
                         ${selectedModel === 'pro'
                           ? 'bg-brand-terracotta text-white'
@@ -634,25 +683,29 @@ export default function VisualizerPage() {
                     >
                       <Star size={14} />
                       <span>Pro</span>
-                      <span className={`text-[10px] font-normal ${selectedModel === 'pro' ? 'text-white/70' : 'text-brand-muted/60'}`}>
-                        Nano Banana Pro
-                      </span>
                     </button>
                   </div>
                 </div>
 
                 {/* Credits + Render Button row */}
                 <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                  <div className="text-brand-muted text-xs font-semibold">
-                    {credits !== null ? (
-                      <>
-                        <span className="text-brand-terracotta font-bold">{credits} of {totalCredits ?? credits} credits left</span>
-                        {totalCredits !== null && credits !== null && (
-                          <> - {totalCredits - credits} used</>
-                        )}
-                      </>
-                    ) : (
-                      <span className="text-brand-terracotta font-bold">Unlimited credits</span>
+                  <div className="w-full md:w-auto min-w-[200px] flex flex-col gap-1">
+                    <div className="text-brand-text text-sm font-semibold flex justify-between">
+                      <span>Credits</span>
+                      <span>
+                        {credits !== null ? `${(totalCredits ?? 30) - credits} / ${totalCredits ?? 30}` : 'Unlimited'}
+                      </span>
+                    </div>
+                    {credits !== null && (
+                      <div className="w-full h-1.5 bg-black/10 rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            (30 - credits) >= 28 ? 'bg-red-500' :
+                            (30 - credits) >= 20 ? 'bg-amber-500' : 'bg-brand-terracotta'
+                          }`}
+                          style={{ width: `${Math.min(100, Math.max(0, ((30 - credits) / 30) * 100))}%` }}
+                        />
+                      </div>
                     )}
                   </div>
 
@@ -811,6 +864,81 @@ export default function VisualizerPage() {
           </div>
         )}
       </Modal>
+
+      {/* History Drawer */}
+      <div className={`fixed inset-0 z-50 transition-opacity duration-300 ${isHistoryOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsHistoryOpen(false)} />
+        <div className={`absolute top-0 right-0 bottom-0 w-full max-w-sm bg-white shadow-2xl transition-transform duration-300 transform flex flex-col ${isHistoryOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+          <div className="flex items-center justify-between p-4 border-b border-black/10 bg-brand-bg">
+            <div>
+              <h2 className="font-bold text-lg font-serif">Render History</h2>
+              <p className="text-xs text-brand-muted">Showing last 30 renders</p>
+            </div>
+            <button onClick={() => setIsHistoryOpen(false)} className="p-2 hover:bg-black/5 rounded-full transition-colors text-brand-text">
+              <X size={20} />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-[#f2ede4]">
+            {isHistoryLoading ? (
+              <div className="space-y-4">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="bg-white rounded-xl h-24 animate-pulse border border-black/5" />
+                ))}
+              </div>
+            ) : historyItems.length === 0 ? (
+              <div className="flex flex-col items-center justify-center text-center h-full text-brand-muted">
+                <History size={48} className="opacity-20 mb-4" />
+                <p className="text-sm">No renders yet. Select a room and fabric to get started.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {historyItems.map((item) => {
+                  const date = new Date(item.created_at).toLocaleString('en-US', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+                  return (
+                    <div key={item.id} className={`bg-white rounded-xl overflow-hidden shadow-sm border border-black/5 transition-all duration-300 ${!historyItems.find(i => i.id === item.id) ? 'opacity-0 h-0' : 'opacity-100'}`}>
+                      <div className="flex p-3 gap-3">
+                        <div className="w-20 h-20 bg-brand-alt rounded-lg overflow-hidden shrink-0 relative">
+                          {item.status === 'completed' && item.after_url ? (
+                            <img src={item.after_url.startsWith('http') ? item.after_url : `${API_URL}${item.after_url}`} alt="Render" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              {item.status === 'processing' ? <Loader2 size={16} className="animate-spin text-brand-muted" /> : <ImageIcon size={16} className="text-brand-muted/50" />}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 flex flex-col justify-center min-w-0">
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full
+                              ${item.status === 'completed' ? 'bg-green-100 text-green-700' :
+                                item.status === 'processing' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                              {item.status}
+                            </span>
+                            <button onClick={() => setConfirmDeleteId(confirmDeleteId === item.id ? null : item.id)} className="text-brand-muted hover:text-red-500 transition-colors p-1" title="Delete Render">
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                          <p className="text-xs font-semibold text-brand-text truncate">{item.object_type || 'Unknown'}</p>
+                          <p className="text-[10px] text-brand-muted mt-1">{date}</p>
+                        </div>
+                      </div>
+                      {/* Delete Confirmation Row */}
+                      {confirmDeleteId === item.id && (
+                        <div className="bg-red-50 p-3 border-t border-red-100 flex flex-col gap-2 transition-all duration-200">
+                          <p className="text-xs text-red-800 font-semibold text-center">Are you sure you want to delete this render?</p>
+                          <div className="flex justify-center gap-2">
+                            <Button size="sm" variant="outline" onClick={() => setConfirmDeleteId(null)} className="h-7 text-xs border-red-200 text-red-800 hover:bg-red-100">Cancel</Button>
+                            <Button size="sm" onClick={() => handleDeleteHistory(item.id)} className="h-7 text-xs bg-red-600 hover:bg-red-700 text-white">Delete</Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

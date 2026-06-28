@@ -133,7 +133,33 @@ export const AREA_PROMPT_FRAGMENTS: Record<string, AreaPromptFragment> = {
     drapingInstruction:
       'In the source photograph provided above, apply the provided textile or wallcovering swatch uniformly to all visible wall surfaces, ensuring exact color precision and quality match, maintaining consistent scale, corner transitions, and realistic texture across the room',
     materialContext:
-      'wallcovering � full-room surface treatment, consistent pattern repeat',
+      'wallcovering  full-room surface treatment, consistent pattern repeat',
+  },
+
+  chair_seat: {
+    areaKey: 'chair_seat',
+    objectDescription: 'chair seat cushion(s) only',
+    drapingInstruction:
+      'In the source photograph provided above, replace the upholstery fabric covering the seat cushion(s) of the chair with the provided textile swatch, ensuring exact color precision and fabric quality match, maintaining realistic fabric folds, tuck lines, and seat compression creases',
+    materialContext:
+      'upholstery fabric — tight weave, minimal drape, compresses under weight',
+  },
+
+  chair_back: {
+    areaKey: 'chair_back',
+    objectDescription: 'chair back cushion(s) only',
+    drapingInstruction:
+      'In the source photograph provided above, replace the upholstery on the chair backrest with the provided textile swatch, ensuring exact color precision and fabric quality match, preserving button tufting detail if present, realistic fold shadows, and vertical alignment of fabric grain',
+    materialContext: 'upholstery fabric — structured drape, medium stiffness',
+  },
+
+  chair_all: {
+    areaKey: 'chair_all',
+    objectDescription: 'full chair upholstery (seat, back, and armrests)',
+    drapingInstruction:
+      'In the source photograph provided above, re-upholster the entire chair with the provided textile swatch as a continuous fabric, ensuring exact color precision and fabric quality match, wrapping naturally over arms, back, and seat with realistic tension lines and corner folding',
+    materialContext:
+      'upholstery fabric — continuous surface treatment, edge wrapping required',
   },
 };
 

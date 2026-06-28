@@ -59,28 +59,40 @@ export default async function historyRoutes(fastify: FastifyInstance) {
     }
   );
 
-  // ── DELETE /api/history/:id ────────────────────
+  // ── DELETE /api/history/:id and /api/visualizations/:id ──────────
+  const deleteHandler = async (request: any, reply: any) => {
+    const user = request.user as TokenPayload;
+    const accessCodeId = 'accessCodeId' in user ? user.accessCodeId : undefined;
+    
+    // For customers, item must belong to their accessCodeId
+    const item = await getHistoryItem(fastify.db, request.params.id, accessCodeId);
+    if (!item) {
+      return reply.status(404).send(error('NOT_FOUND', 'Visualization not found or not owned by you'));
+    }
+
+    await deleteHistoryItem(fastify.db, request.params.id);
+
+    const userId = 'userId' in user ? user.userId : accessCodeId;
+    await writeAuditLog(fastify.db, {
+      userId: userId || 'customer',
+      action: 'visualization_deleted',
+      entityType: 'visualization',
+      entityId: request.params.id,
+      ipAddress: request.ip,
+    });
+
+    return reply.send(success({ message: 'History item removed' }));
+  };
+
   fastify.delete<{ Params: { id: string } }>(
     '/api/history/:id',
-    { preHandler: [requireAdmin] },
-    async (request: any, reply: any) => {
-      const item = await getHistoryItem(fastify.db, request.params.id);
-      if (!item) {
-        return reply.status(404).send(error('NOT_FOUND', 'Visualization not found'));
-      }
+    { preHandler: [authenticate] },
+    deleteHandler
+  );
 
-      await deleteHistoryItem(fastify.db, request.params.id);
-
-      const user = request.user as { userId: string };
-      await writeAuditLog(fastify.db, {
-        userId: user.userId,
-        action: 'visualization_deleted',
-        entityType: 'visualization',
-        entityId: request.params.id,
-        ipAddress: request.ip,
-      });
-
-      return reply.send(success({ message: 'History item removed' }));
-    }
+  fastify.delete<{ Params: { id: string } }>(
+    '/api/visualizations/:id',
+    { preHandler: [authenticate] },
+    deleteHandler
   );
 }

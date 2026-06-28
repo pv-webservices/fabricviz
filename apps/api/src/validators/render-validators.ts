@@ -5,6 +5,9 @@ const VALID_AREA_KEYS = [
   'sofa_seat',
   'sofa_back',
   'sofa_all',
+  'chair_seat',
+  'chair_back',
+  'chair_all',
   'front_curtain',
   'back_curtain',
   'headboard',
@@ -37,7 +40,7 @@ const multiAreaRenderSchema = z
     areaAssignments: z
       .array(areaAssignmentSchema)
       .min(1, 'At least one area assignment is required')
-      .max(11, 'Maximum of 11 area assignments allowed'),
+      .max(14, 'Maximum of 14 area assignments allowed'),
     model: z.enum(['fast', 'pro']).default('fast'),
     sourceType: z.enum(['predefined_room', 'uploaded_photo']),
     roomId: z.string().uuid('Invalid room ID').optional(),

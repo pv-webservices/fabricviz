@@ -4,7 +4,7 @@ import { useCustomerAuth } from '../context/CustomerAuthContext';
 import {
   ArrowLeft, Upload, Wand2, Loader2, History, RotateCcw,
   Image as ImageIcon, Sofa, Blinds, Grid, Bed, Square, Plus, Check,
-  Zap, Star, Trash2, X
+  Zap, Star, Trash2, X, Eye, Download, Pencil, AlertTriangle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
@@ -32,6 +32,8 @@ const STYLE_AREAS = [
   { id: 'all_walls',    label: 'All Walls',     category: 'wallpaper', icon: ImageIcon },
 ] as const;
 
+type AreaId = typeof STYLE_AREAS[number]['id'];
+
 // ── Types ────────────────────────────────────────────────────────────────────
 
 interface FavoriteFabric {
@@ -47,14 +49,38 @@ interface AssignedFabric {
   fabricId: string;
   fabricName: string;
   fabricCode: string;
+  collectionName: string;
   image_url: string;
   fabricColorDescription: string;
   fabricTextureDescription: string;
   fabricImageUrl: string | null;
 }
 
+interface HistoryItem {
+  id: string;
+  object_type: string | null;
+  source_type: string | null;
+  status: string;
+  before_url: string | null;
+  after_url: string | null;
+  pdf_url: string | null;
+  created_at: string;
+  fabric_name: string | null;
+  fabric_thumbnail: string | null;
+  room_name: string | null;
+  area_assignments: AreaAssignmentRecord[] | null;
+  collection_name?: string | null;
+}
+
+interface AreaAssignmentRecord {
+  areaKey: string;
+  fabricName: string;
+  fabricCode: string;
+}
+
 type ModelChoice = 'fast' | 'pro';
 type RoomType = { id: string; name: string; image_url: string } | null;
+type BeforeAfterTab = 'before' | 'after';
 
 // ── Component ────────────────────────────────────────────────────────────────
 
@@ -82,6 +108,9 @@ export default function VisualizerPage() {
   const [renderedImage, setRenderedImage] = useState<string | null>(null);
   const [currentJobId, setCurrentJobId] = useState<string | null>(null);
 
+  // Before/After toggle in step 3
+  const [activeTab, setActiveTab] = useState<BeforeAfterTab>('after');
+
   // Credits state — fetched from API
   const [credits, setCredits] = useState<number | null>(null);
   const [totalCredits, setTotalCredits] = useState<number | null>(null);
@@ -89,7 +118,7 @@ export default function VisualizerPage() {
   // History state
   const [historyCount, setHistoryCount] = useState<number>(0);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [historyItems, setHistoryItems] = useState<any[]>([]);
+  const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
@@ -115,32 +144,37 @@ export default function VisualizerPage() {
         if (json.success) {
           setRooms(json.data.items || []);
         }
-      } catch (err) {
-        console.error('Failed to fetch rooms', err);
+      } catch {
+        // silent — rooms are non-critical
       }
     };
     fetchRooms();
   }, []);
 
   // ── Fetch credits ───────────────────────────────────────────────────────────
+  // credits live on access_codes (access-code login) — not on customer accounts
+  // For customer_user tokens, credits will remain null (unlimited / N/A)
 
   const fetchCredits = useCallback(async () => {
     const token = localStorage.getItem('customer_token');
     if (!token) return;
     try {
-      const res = await fetch(`${API_URL}/api/auth/customer/me`, {
+      const res = await fetch(`${API_URL}/api/auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const json = await res.json();
-      if (json.success && json.data) {
-        // credit_limit from access_code or from customer — handle both shapes
-        const cl = json.data.credit_limit ?? json.data.credits_remaining ?? null;
-        const tl = json.data.credit_total ?? json.data.credit_limit_total ?? null;
-        if (cl !== null) setCredits(Number(cl));
-        if (tl !== null) setTotalCredits(Number(tl));
+      if (json.success && json.data && json.data.type === 'customer') {
+        // access-code customers: credit_limit = credits remaining, credits_used = used so far
+        const remaining = json.data.credit_limit;
+        const used = json.data.credits_used ?? 0;
+        if (remaining !== null && remaining !== undefined) {
+          setCredits(Number(remaining));
+          setTotalCredits(Number(remaining) + Number(used));
+        }
       }
-    } catch (err) {
-      console.error('Failed to fetch credits', err);
+      // customer_user tokens return type !== 'customer' — credits remain null (N/A)
+    } catch {
+      // silent
     }
   }, []);
 
@@ -155,8 +189,8 @@ export default function VisualizerPage() {
       if (json.success && json.data) {
         setHistoryCount(json.data.total || 0);
       }
-    } catch (err) {
-      console.error('Failed to fetch history count', err);
+    } catch {
+      // silent
     }
   }, []);
 
@@ -165,7 +199,7 @@ export default function VisualizerPage() {
     if (!token) return;
     setIsHistoryLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/history?limit=30`, {
+      const res = await fetch(`${API_URL}/api/history?limit=50`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const json = await res.json();
@@ -173,8 +207,8 @@ export default function VisualizerPage() {
         setHistoryItems(json.data.items || []);
         setHistoryCount(json.data.total || 0);
       }
-    } catch (err) {
-      console.error('Failed to fetch history list', err);
+    } catch {
+      // silent
     } finally {
       setIsHistoryLoading(false);
     }
@@ -194,11 +228,41 @@ export default function VisualizerPage() {
         setHistoryCount(prev => Math.max(0, prev - 1));
         setConfirmDeleteId(null);
       } else {
-        toast({ title: 'Delete Failed', description: 'Could not delete history item. Try again.', variant: 'destructive' });
+        toast({ title: 'Delete Failed', description: 'Could not delete. Try again.', variant: 'destructive' });
       }
-    } catch (err) {
-      console.error('Failed to delete history item', err);
+    } catch {
       toast({ title: 'Delete Failed', description: 'Network error. Try again.', variant: 'destructive' });
+    }
+  };
+
+  const handleClearAllHistory = async () => {
+    const token = localStorage.getItem('customer_token');
+    if (!token) return;
+    const ids = historyItems.map(i => i.id);
+    try {
+      await Promise.all(
+        ids.map(id =>
+          fetch(`${API_URL}/api/visualizations/${id}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` },
+          })
+        )
+      );
+      setHistoryItems([]);
+      setHistoryCount(0);
+      setConfirmDeleteId(null);
+      toast({ title: 'History Cleared', description: 'All render history has been removed.' });
+    } catch {
+      toast({ title: 'Clear Failed', description: 'Could not clear history. Try again.', variant: 'destructive' });
+    }
+  };
+
+  const handleViewHistoryItem = (item: HistoryItem) => {
+    if (item.after_url) {
+      setRenderedImage(item.after_url.startsWith('http') ? item.after_url : `${API_URL}${item.after_url}`);
+      setActiveTab('after');
+      setStep(3);
+      setIsHistoryOpen(false);
     }
   };
 
@@ -222,6 +286,10 @@ export default function VisualizerPage() {
   const assignedCount = Object.values(assignments).filter(Boolean).length;
   const activeAreaObj = STYLE_AREAS.find((a) => a.id === activeArea);
 
+  // All assigned area entries for the fabrics-used panel
+  const assignedEntries = (Object.entries(assignments) as [AreaId, AssignedFabric | null][])
+    .filter((entry): entry is [AreaId, AssignedFabric] => entry[1] !== null);
+
   // Filter favorites by category for the active area
   const filteredFavorites = activeAreaObj
     ? (favoriteFabrics as FavoriteFabric[]).filter((f) => {
@@ -239,7 +307,6 @@ export default function VisualizerPage() {
       })
     : [];
 
-  // Render button label
   const renderButtonLabel =
     assignedCount === 0
       ? 'Assign a fabric to start'
@@ -278,6 +345,7 @@ export default function VisualizerPage() {
           fabricId: fabric.id,
           fabricName: fabric.title,
           fabricCode: fabric.code,
+          collectionName: fabric.collection_name,
           image_url: fabric.image_url,
           fabricColorDescription: '',
           fabricTextureDescription: '',
@@ -293,10 +361,24 @@ export default function VisualizerPage() {
     setAssignments((prev) => ({ ...prev, [areaId]: null }));
   };
 
+  const handleDownloadImage = () => {
+    if (!renderedImage) return;
+    const a = document.createElement('a');
+    a.href = renderedImage;
+    a.download = 'fabricviz-render.jpg';
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.click();
+  };
+
+  const handleDownloadPdf = () => {
+    toast({ title: 'Coming Soon', description: 'PDF download will be available in the next update.' });
+  };
+
   // ── Polling ─────────────────────────────────────────────────────────────────
 
   const startPolling = useCallback(
-    (jobId: string, creditsBefore: number) => {
+    (jobId: string, creditsBefore: number | null) => {
       let retryCount = 0;
       const MAX_NETWORK_RETRIES = 3;
 
@@ -304,7 +386,7 @@ export default function VisualizerPage() {
         const token = localStorage.getItem('customer_token');
         try {
           const res = await fetch(`${API_URL}/api/renders/${jobId}/status`, {
-            headers: { Authorization: `Bearer ${token}` },
+            headers: { Authorization: `Bearer ${token ?? ''}` },
           });
           const json = await res.json();
           if (!json.success) return;
@@ -315,13 +397,13 @@ export default function VisualizerPage() {
             if (pollingRef.current) clearInterval(pollingRef.current);
             setIsRendering(false);
             setRenderedImage(afterUrl);
-            // Re-fetch actual credits
+            setActiveTab('after');
             await fetchCredits();
+            await fetchHistoryCount();
           } else if (jobStatus === 'failed') {
             if (pollingRef.current) clearInterval(pollingRef.current);
             setIsRendering(false);
-            setStep(2); // Go back to area assignment
-            // Restore optimistic credit
+            setStep(2);
             setCredits((prev) => (prev !== null ? prev + 1 : null));
             toast({
               title: 'Render Failed',
@@ -330,13 +412,13 @@ export default function VisualizerPage() {
             });
             await fetchCredits();
           }
-          retryCount = 0; // reset on success
+          retryCount = 0;
         } catch {
           retryCount += 1;
           if (retryCount >= MAX_NETWORK_RETRIES) {
             if (pollingRef.current) clearInterval(pollingRef.current);
             setIsRendering(false);
-            setCredits(creditsBefore);
+            if (creditsBefore !== null) setCredits(creditsBefore);
             toast({
               title: 'Connection Lost',
               description: 'Lost connection while waiting for render. Please check your result in History.',
@@ -346,26 +428,23 @@ export default function VisualizerPage() {
         }
       }, 3000);
     },
-    [fetchCredits, toast],
+    [fetchCredits, fetchHistoryCount, toast],
   );
 
   // ── Render submission ────────────────────────────────────────────────────────
 
   const handleRender = async () => {
-    // Pre-flight check a: nothing assigned (button is disabled, unreachable normally)
     if (assignedCount === 0) return;
 
-    // Pre-flight check b: no credits
     if (credits !== null && credits < 1) {
       toast({
         title: 'No Credits Left',
-        description: 'You have no credits left. Please purchase more credits to continue.',
+        description: 'You have no credits left. Please contact your showroom to top up.',
         variant: 'destructive',
       });
       return;
     }
 
-    // Pre-flight check c: no room selected
     if (!selectedRoom) {
       toast({
         title: 'No Room Selected',
@@ -378,7 +457,6 @@ export default function VisualizerPage() {
     const token = localStorage.getItem('customer_token');
     if (!token) return;
 
-    // Build areaAssignments payload
     const areaAssignments = (Object.entries(assignments) as [string, AssignedFabric | null][])
       .filter(([, v]) => v !== null)
       .map(([areaKey, v]) => ({
@@ -400,10 +478,10 @@ export default function VisualizerPage() {
       areaAssignments,
     };
 
-    // Optimistic credit decrement
     const creditsBefore = credits;
     setCredits((prev) => (prev !== null && prev > 0 ? prev - 1 : prev));
     setIsRendering(true);
+    setRenderedImage(null);
     setStep(3);
 
     try {
@@ -437,8 +515,6 @@ export default function VisualizerPage() {
 
       const jobId: string = json.data.jobId;
       setCurrentJobId(jobId);
-
-      // Start polling for job status
       startPolling(jobId, creditsBefore);
     } catch {
       setIsRendering(false);
@@ -457,6 +533,7 @@ export default function VisualizerPage() {
     setCurrentJobId(null);
     setShowRooms(false);
     setIsRendering(false);
+    setActiveTab('after');
   };
 
   // ── Auth guard UI ────────────────────────────────────────────────────────────
@@ -483,24 +560,43 @@ export default function VisualizerPage() {
     );
   }
 
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+
+  const formatAreaLabel = (areaId: string) =>
+    STYLE_AREAS.find(a => a.id === areaId)?.label ?? areaId.replace(/_/g, ' ').toUpperCase();
+
   // ── JSX ──────────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen pt-[70px] md:pt-[92px] flex flex-col font-sans bg-[#f2ede4] text-brand-text">
+    <div className="min-h-screen pt-[70px] md:pt-[92px] flex flex-col font-sans bg-brand-alt text-brand-text">
       <div className="flex-1 flex flex-col">
 
-        {/* Top Header Actions (History, Start over) */}
-        <div className="max-w-5xl mx-auto w-full px-4 pt-6 pb-2 flex justify-end gap-6 text-sm font-semibold text-brand-muted">
-          <button 
-            onClick={() => { setIsHistoryOpen(true); fetchHistoryList(); }}
-            className="flex items-center gap-2 hover:text-brand-text transition-colors"
-          >
-            <History size={16} /> History{' '}
-            <span className="bg-brand-terracotta text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1">{historyCount}</span>
-          </button>
-          <button onClick={reset} className="flex items-center gap-2 hover:text-brand-text transition-colors">
-            <RotateCcw size={16} /> Start over
-          </button>
+        {/* Top Header Actions */}
+        <div className="max-w-5xl mx-auto w-full px-4 pt-6 pb-2 flex justify-between items-center gap-6 text-sm font-semibold text-brand-muted">
+          {/* Credits pill */}
+          <div className="flex items-center gap-1.5 bg-white/60 border border-black/8 rounded-full px-3 py-1">
+            <Zap size={13} className="text-brand-terracotta" />
+            <span className="text-brand-text text-xs font-semibold">
+              {credits !== null ? `${credits} credits` : '—'}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-6">
+            <button
+              onClick={() => { setIsHistoryOpen(true); fetchHistoryList(); }}
+              className="flex items-center gap-2 hover:text-brand-text transition-colors"
+            >
+              <History size={16} /> History{' '}
+              {historyCount > 0 && (
+                <span className="bg-brand-terracotta text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1">
+                  {historyCount}
+                </span>
+              )}
+            </button>
+            <button onClick={reset} className="flex items-center gap-2 hover:text-brand-text transition-colors">
+              <RotateCcw size={16} /> Start over
+            </button>
+          </div>
         </div>
 
         {/* Stepper */}
@@ -514,11 +610,8 @@ export default function VisualizerPage() {
               <div
                 key={n}
                 onClick={() => {
-                  if (step > n) {
-                    setStep(n);
-                  } else if (n === 3 && renderedImage) {
-                    setStep(3);
-                  }
+                  if (step > n) setStep(n);
+                  else if (n === 3 && renderedImage) setStep(3);
                 }}
                 className={`px-4 md:px-6 py-2 rounded-full flex items-center gap-2 text-sm font-medium transition-colors
                   ${step === n ? 'bg-brand-terracotta text-white' : 'text-brand-muted hover:text-brand-text cursor-pointer'}`}
@@ -549,10 +642,11 @@ export default function VisualizerPage() {
         <div className="flex-1 max-w-5xl mx-auto w-full px-4 pb-20">
 
           {step === 3 ? (
-            /* ── Step 3: Render result ───────────────────────────────────────── */
-            <div className="flex-1 flex flex-col items-center justify-center py-20">
+            /* ── Step 3: Render result / Before-After ────────────────────── */
+            <div className="flex flex-col items-center gap-6 py-4 animate-in fade-in duration-300">
               {isRendering ? (
-                <div className="flex flex-col items-center gap-4 text-brand-terracotta">
+                /* Loading state */
+                <div className="flex flex-col items-center gap-4 text-brand-terracotta py-20">
                   <Wand2 size={48} className="animate-pulse" />
                   <Loader2 size={24} className="animate-spin text-brand-muted" />
                   <div className="text-xl font-bold animate-pulse text-brand-text mt-2 font-serif tracking-wide">
@@ -561,25 +655,167 @@ export default function VisualizerPage() {
                   <p className="text-brand-muted text-sm">
                     Applying {assignedCount} fabric{assignedCount !== 1 ? 's' : ''} to the selected room.
                   </p>
-                  <p className="text-brand-muted text-xs opacity-60">Using {selectedModel === 'pro' ? 'Nano Banana Pro' : 'Nano Banana 2.0'} model</p>
+                  <p className="text-brand-muted text-xs opacity-60">
+                    Using {selectedModel === 'pro' ? 'Nano Banana Pro' : 'Nano Banana 2.0'} model
+                  </p>
                 </div>
               ) : (
-                <div className="w-full max-w-5xl flex flex-col items-center animate-in fade-in zoom-in duration-500">
-                  <div className="relative w-full aspect-video rounded-2xl overflow-hidden shadow-2xl border border-black/5 group">
-                    <img src={renderedImage!} alt="Rendered Room" className="w-full h-full object-cover" />
-                    <div className="absolute inset-x-0 bottom-0 p-6 bg-gradient-to-t from-black/80 to-transparent flex items-end justify-between opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div>
-                        <h3 className="text-white font-bold text-2xl font-serif tracking-wide">Render Complete</h3>
-                        <p className="text-white/80 text-sm uppercase tracking-wider">{assignedCount} Area{assignedCount !== 1 ? 's' : ''} Assigned</p>
+                <div className="w-full max-w-lg flex flex-col items-center gap-4">
+                  {/* Title */}
+                  <div className="text-center">
+                    <h1 className="font-serif text-2xl md:text-3xl text-brand-terracotta font-semibold tracking-wide">
+                      Your Visualization
+                    </h1>
+                    <p className="text-brand-muted text-sm mt-1">Compare before and after</p>
+                  </div>
+
+                  {/* Before / After tabs */}
+                  <div className="flex bg-black/8 rounded-full p-1 gap-1">
+                    <button
+                      onClick={() => setActiveTab('before')}
+                      className={`px-5 py-2 rounded-full text-sm font-semibold transition-colors ${
+                        activeTab === 'before'
+                          ? 'bg-brand-terracotta text-white'
+                          : 'text-brand-muted hover:text-brand-text'
+                      }`}
+                    >
+                      Before
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('after')}
+                      className={`px-5 py-2 rounded-full text-sm font-semibold transition-colors ${
+                        activeTab === 'after'
+                          ? 'bg-brand-terracotta text-white'
+                          : 'text-brand-muted hover:text-brand-text'
+                      }`}
+                    >
+                      After
+                    </button>
+                  </div>
+
+                  {/* 3:4 portrait image container */}
+                  <div className="w-full rounded-xl overflow-hidden shadow-xl border border-black/8" style={{ aspectRatio: '3/4' }}>
+                    <img
+                      key={activeTab}
+                      src={activeTab === 'before' ? (selectedRoom?.image_url ?? '') : (renderedImage ?? '')}
+                      alt={activeTab === 'before' ? 'Original room' : 'Rendered room'}
+                      className="w-full h-full object-cover animate-in fade-in duration-300"
+                    />
+                  </div>
+
+                  {/* Disclaimer */}
+                  <div className="w-full flex items-start gap-2 bg-white/70 border border-black/8 rounded-lg px-3 py-2">
+                    <AlertTriangle size={14} className="text-amber-500 mt-0.5 shrink-0" />
+                    <p className="text-xs text-brand-muted leading-relaxed">
+                      AI-generated image for idea generation and visualization only. Scale &amp; colour may vary. Always refer to the swatch in the Catalog.
+                    </p>
+                  </div>
+
+                  {/* Fabrics used panel */}
+                  {assignedEntries.length > 0 && (
+                    <div className="w-full bg-white rounded-xl border border-black/8 shadow-sm overflow-hidden">
+                      <div className="flex items-center justify-between px-4 py-3 border-b border-black/6">
+                        <h3 className="font-semibold text-sm text-brand-text">
+                          Fabrics used ({assignedEntries.length})
+                        </h3>
+                        <button
+                          onClick={() => setStep(2)}
+                          className="text-xs text-brand-terracotta font-semibold hover:opacity-75 transition-opacity"
+                        >
+                          Edit all
+                        </button>
+                      </div>
+                      <div className="divide-y divide-black/5">
+                        {assignedEntries.map(([areaId, fabric]) => (
+                          <div key={areaId} className="flex items-center gap-3 px-4 py-3">
+                            <div className="w-10 h-10 rounded-lg overflow-hidden bg-brand-alt shrink-0 border border-black/8">
+                              <img
+                                src={fabric.image_url}
+                                alt={fabric.fabricName}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-brand-terracotta">
+                                {formatAreaLabel(areaId)}
+                              </p>
+                              <p className="text-sm font-semibold text-brand-text truncate">{fabric.fabricName}</p>
+                              {fabric.collectionName && (
+                                <p className="text-[10px] text-brand-muted truncate">{fabric.collectionName}</p>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => { setStep(2); setActiveArea(areaId); }}
+                              className="p-1.5 rounded-full hover:bg-brand-alt transition-colors text-brand-muted hover:text-brand-terracotta shrink-0"
+                              title="Edit this fabric"
+                            >
+                              <Pencil size={13} />
+                            </button>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  </div>
-                  <div className="flex gap-4 mt-8">
-                    <Button onClick={() => setStep(2)} variant="outline" className="border-brand-text/20 text-brand-text hover:bg-black/5">
-                      Edit Assignments
+                  )}
+
+                  {/* Action buttons */}
+                  <div className="w-full grid grid-cols-2 gap-3">
+                    <Button
+                      onClick={handleDownloadImage}
+                      variant="outline"
+                      className="border-brand-text/20 text-brand-text hover:bg-black/5 gap-2"
+                    >
+                      <Download size={15} /> Download Image
                     </Button>
-                    <Button onClick={reset} className="bg-brand-terracotta hover:opacity-90 text-white">
-                      Start New Project
+                    <Button
+                      onClick={handleDownloadPdf}
+                      variant="outline"
+                      className="border-brand-text/20 text-brand-text hover:bg-black/5 gap-2"
+                    >
+                      <Download size={15} /> Download PDF
+                    </Button>
+                  </div>
+
+                  {/* What's Next */}
+                  <div className="w-full bg-white rounded-xl border border-black/8 shadow-sm p-4">
+                    <h3 className="font-serif font-semibold text-brand-text mb-3 text-center">What&apos;s Next?</h3>
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      <button
+                        onClick={() => setStep(2)}
+                        className="flex flex-col items-center gap-1 p-3 rounded-xl border border-black/8 bg-brand-alt/40 hover:bg-brand-alt transition-colors text-center"
+                      >
+                        <Pencil size={18} className="text-brand-terracotta" />
+                        <span className="text-sm font-semibold text-brand-text">Edit &amp; Re-render</span>
+                        <span className="text-[10px] text-brand-muted">Swap fabrics, same room</span>
+                      </button>
+                      <button
+                        onClick={() => { setSelectedRoom(null); setStep(1); }}
+                        className="flex flex-col items-center gap-1 p-3 rounded-xl border border-black/8 bg-brand-alt/40 hover:bg-brand-alt transition-colors text-center"
+                      >
+                        <ImageIcon size={18} className="text-brand-terracotta" />
+                        <span className="text-sm font-semibold text-brand-text">Try Another Photo</span>
+                        <span className="text-[10px] text-brand-muted">Same fabric</span>
+                      </button>
+                    </div>
+                    <button
+                      onClick={reset}
+                      className="w-full flex flex-col items-center gap-1 p-3 rounded-xl border border-brand-terracotta/20 bg-brand-terracotta/5 hover:bg-brand-terracotta/10 transition-colors text-center"
+                    >
+                      <RotateCcw size={18} className="text-brand-terracotta" />
+                      <span className="text-sm font-semibold text-brand-terracotta">Start Fresh</span>
+                    </button>
+                  </div>
+
+                  {/* Need help bar */}
+                  <div className="w-full bg-brand-dark rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-3">
+                    <div>
+                      <p className="font-serif text-white font-medium text-base">Need help choosing?</p>
+                      <p className="text-white/60 text-xs">Visit a store or reach out — our team is happy to assist.</p>
+                    </div>
+                    <Button
+                      onClick={() => navigate('/contact')}
+                      className="bg-brand-terracotta hover:opacity-90 text-white shrink-0 text-xs"
+                    >
+                      Contact Us
                     </Button>
                   </div>
                 </div>
@@ -654,15 +890,11 @@ export default function VisualizerPage() {
 
               {/* Model Toggle + Bottom Action Bar */}
               <div className="bg-brand-bg rounded-xl border border-black/5 p-4 flex flex-col gap-4">
-                {/* Model Toggle — Part 7 */}
                 <div className="flex flex-col gap-2">
                   <span className="text-xs text-brand-muted font-semibold uppercase tracking-wider">Render Quality</span>
                   <div className="flex w-full rounded-lg overflow-hidden border border-black/10 bg-brand-alt/30">
-                    {/* Fast option */}
                     <button
-                      id="model-toggle-fast"
                       onClick={() => setSelectedModel('fast')}
-                      title="Fast generation, great for previews"
                       className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold transition-colors min-h-[44px]
                         ${selectedModel === 'fast'
                           ? 'bg-brand-terracotta text-white'
@@ -671,11 +903,8 @@ export default function VisualizerPage() {
                       <Zap size={14} />
                       <span>Fast</span>
                     </button>
-                    {/* Pro option */}
                     <button
-                      id="model-toggle-pro"
                       onClick={() => setSelectedModel('pro')}
-                      title="Highest quality, production renders"
                       className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold transition-colors min-h-[44px]
                         ${selectedModel === 'pro'
                           ? 'bg-brand-terracotta text-white'
@@ -692,25 +921,25 @@ export default function VisualizerPage() {
                   <div className="w-full md:w-auto min-w-[200px] flex flex-col gap-1">
                     <div className="text-brand-text text-sm font-semibold flex justify-between">
                       <span>Credits</span>
-                      <span>
-                        {credits !== null ? `${(totalCredits ?? 30) - credits} / ${totalCredits ?? 30}` : 'Unlimited'}
+                      <span className="flex items-center gap-1">
+                        <Zap size={12} className="text-brand-terracotta" />
+                        {credits !== null ? `${credits} remaining` : '—'}
                       </span>
                     </div>
-                    {credits !== null && (
+                    {credits !== null && totalCredits !== null && (
                       <div className="w-full h-1.5 bg-black/10 rounded-full overflow-hidden">
-                        <div 
+                        <div
                           className={`h-full rounded-full transition-all duration-500 ${
-                            (30 - credits) >= 28 ? 'bg-red-500' :
-                            (30 - credits) >= 20 ? 'bg-amber-500' : 'bg-brand-terracotta'
+                            credits <= 2 ? 'bg-red-500' :
+                            credits <= 8 ? 'bg-amber-500' : 'bg-brand-terracotta'
                           }`}
-                          style={{ width: `${Math.min(100, Math.max(0, ((30 - credits) / 30) * 100))}%` }}
+                          style={{ width: `${Math.min(100, Math.max(0, (credits / totalCredits) * 100))}%` }}
                         />
                       </div>
                     )}
                   </div>
 
                   <Button
-                    id="render-submit-btn"
                     onClick={handleRender}
                     disabled={isRenderDisabled}
                     className={`w-full md:w-auto px-8 font-bold tracking-wider
@@ -737,7 +966,6 @@ export default function VisualizerPage() {
                 </p>
               </div>
 
-              {/* Room Selection Buttons */}
               <div className="space-y-6">
                 <button
                   onClick={() => setShowRooms(!showRooms)}
@@ -827,7 +1055,7 @@ export default function VisualizerPage() {
             <ImageIcon size={48} className="text-brand-muted mb-4 opacity-30" />
             <h3 className="font-bold text-lg mb-2">No matching favorites</h3>
             <p className="text-brand-muted text-sm max-w-sm mb-6">
-              You don't have any favorite fabrics in the <strong>{activeAreaObj?.category}</strong> category yet.
+              You don&apos;t have any favorite fabrics in the <strong>{activeAreaObj?.category}</strong> category yet.
             </p>
             <Button
               onClick={() => {
@@ -867,70 +1095,157 @@ export default function VisualizerPage() {
 
       {/* History Drawer */}
       <div className={`fixed inset-0 z-50 transition-opacity duration-300 ${isHistoryOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
-        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsHistoryOpen(false)} />
-        <div className={`absolute top-0 right-0 bottom-0 w-full max-w-sm bg-white shadow-2xl transition-transform duration-300 transform flex flex-col ${isHistoryOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-          <div className="flex items-center justify-between p-4 border-b border-black/10 bg-brand-bg">
-            <div>
-              <h2 className="font-bold text-lg font-serif">Render History</h2>
-              <p className="text-xs text-brand-muted">Showing last 30 renders</p>
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsHistoryOpen(false)} />
+        <div className={`absolute inset-0 md:top-0 md:right-0 md:bottom-0 md:left-auto md:w-[480px] bg-brand-dark shadow-2xl transition-transform duration-300 transform flex flex-col ${isHistoryOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+
+          {/* Drawer Header */}
+          <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+            <button
+              onClick={() => setIsHistoryOpen(false)}
+              className="flex items-center gap-2 text-white/70 hover:text-white transition-colors text-sm font-semibold"
+            >
+              <ArrowLeft size={16} /> Back
+            </button>
+            <div className="text-center">
+              <h2 className="font-serif font-semibold text-white text-base">Recent Visualizations</h2>
+              <p className="text-white/50 text-xs">{historyCount} visualizations saved</p>
             </div>
-            <button onClick={() => setIsHistoryOpen(false)} className="p-2 hover:bg-black/5 rounded-full transition-colors text-brand-text">
-              <X size={20} />
+            <button
+              onClick={handleClearAllHistory}
+              className="flex items-center gap-1.5 text-red-400 hover:text-red-300 transition-colors text-xs font-semibold"
+              title="Clear all history"
+            >
+              <Trash2 size={14} /> Clear All
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-[#f2ede4]">
+
+          {/* Approaching limit badge */}
+          {historyCount >= 40 && (
+            <div className="mx-4 mt-3 bg-amber-500/20 border border-amber-500/40 rounded-full px-3 py-1.5 flex items-center justify-center">
+              <span className="text-amber-300 text-xs font-semibold">{historyCount}/50 • Approaching limit</span>
+            </div>
+          )}
+
+          {/* Drawer Body */}
+          <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
             {isHistoryLoading ? (
-              <div className="space-y-4">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="bg-white rounded-xl h-24 animate-pulse border border-black/5" />
+              <div className="grid grid-cols-2 gap-3">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="bg-white/10 rounded-xl aspect-[3/4] animate-pulse" />
                 ))}
               </div>
             ) : historyItems.length === 0 ? (
-              <div className="flex flex-col items-center justify-center text-center h-full text-brand-muted">
+              <div className="flex flex-col items-center justify-center text-center h-full text-white/50 py-20">
                 <History size={48} className="opacity-20 mb-4" />
                 <p className="text-sm">No renders yet. Select a room and fabric to get started.</p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
                 {historyItems.map((item) => {
-                  const date = new Date(item.created_at).toLocaleString('en-US', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+                  const date = new Date(item.created_at).toLocaleDateString('en-IN', {
+                    day: 'numeric', month: 'short', year: 'numeric',
+                  });
+                  const afterUrl = item.after_url
+                    ? (item.after_url.startsWith('http') ? item.after_url : `${API_URL}${item.after_url}`)
+                    : null;
+
+                  // Build fabric caption from area_assignments if present
+                  const fabricCaption = item.area_assignments && item.area_assignments.length > 0
+                    ? item.area_assignments
+                        .map(a => `${formatAreaLabel(a.areaKey)}: ${a.fabricName}`)
+                        .join(' • ')
+                    : (item.fabric_name ?? item.object_type ?? 'Render');
+
+                  const primaryFabric = item.area_assignments?.[0]?.fabricName ?? item.fabric_name;
+
                   return (
-                    <div key={item.id} className={`bg-white rounded-xl overflow-hidden shadow-sm border border-black/5 transition-all duration-300 ${!historyItems.find(i => i.id === item.id) ? 'opacity-0 h-0' : 'opacity-100'}`}>
-                      <div className="flex p-3 gap-3">
-                        <div className="w-20 h-20 bg-brand-alt rounded-lg overflow-hidden shrink-0 relative">
-                          {item.status === 'completed' && item.after_url ? (
-                            <img src={item.after_url.startsWith('http') ? item.after_url : `${API_URL}${item.after_url}`} alt="Render" className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              {item.status === 'processing' ? <Loader2 size={16} className="animate-spin text-brand-muted" /> : <ImageIcon size={16} className="text-brand-muted/50" />}
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex-1 flex flex-col justify-center min-w-0">
-                          <div className="flex items-center justify-between gap-2 mb-1">
-                            <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full
-                              ${item.status === 'completed' ? 'bg-green-100 text-green-700' :
-                                item.status === 'processing' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
-                              {item.status}
-                            </span>
-                            <button onClick={() => setConfirmDeleteId(confirmDeleteId === item.id ? null : item.id)} className="text-brand-muted hover:text-red-500 transition-colors p-1" title="Delete Render">
-                              <Trash2 size={14} />
-                            </button>
+                    <div
+                      key={item.id}
+                      className="bg-white/8 rounded-xl overflow-hidden border border-white/10 flex flex-col"
+                    >
+                      {/* Card image */}
+                      <div className="relative aspect-[3/4] bg-white/5 overflow-hidden">
+                        {afterUrl ? (
+                          <img
+                            src={afterUrl}
+                            alt="Render"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            {item.status === 'processing'
+                              ? <Loader2 size={20} className="animate-spin text-white/40" />
+                              : <ImageIcon size={20} className="text-white/20" />
+                            }
                           </div>
-                          <p className="text-xs font-semibold text-brand-text truncate">{item.object_type || 'Unknown'}</p>
-                          <p className="text-[10px] text-brand-muted mt-1">{date}</p>
+                        )}
+                        {/* Fabric summary overlay */}
+                        <div className="absolute top-0 inset-x-0 p-2 bg-gradient-to-b from-black/70 to-transparent">
+                          <p className="text-white text-[9px] leading-tight line-clamp-2">{fabricCaption}</p>
                         </div>
                       </div>
-                      {/* Delete Confirmation Row */}
-                      {confirmDeleteId === item.id && (
-                        <div className="bg-red-50 p-3 border-t border-red-100 flex flex-col gap-2 transition-all duration-200">
-                          <p className="text-xs text-red-800 font-semibold text-center">Are you sure you want to delete this render?</p>
-                          <div className="flex justify-center gap-2">
-                            <Button size="sm" variant="outline" onClick={() => setConfirmDeleteId(null)} className="h-7 text-xs border-red-200 text-red-800 hover:bg-red-100">Cancel</Button>
-                            <Button size="sm" onClick={() => handleDeleteHistory(item.id)} className="h-7 text-xs bg-red-600 hover:bg-red-700 text-white">Delete</Button>
-                          </div>
+
+                      {/* Card info */}
+                      <div className="p-2.5 flex flex-col gap-1.5">
+                        {primaryFabric && (
+                          <p className="text-white text-xs font-semibold truncate">{primaryFabric}</p>
+                        )}
+                        {item.collection_name && (
+                          <p className="text-white/50 text-[10px] truncate">{item.collection_name}</p>
+                        )}
+                        <p className="text-white/40 text-[10px]">{date}</p>
+
+                        {/* Action buttons */}
+                        <div className="flex gap-1.5 mt-1">
+                          <button
+                            onClick={() => handleViewHistoryItem(item)}
+                            className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[10px] font-semibold transition-colors"
+                            title="View"
+                          >
+                            <Eye size={11} /> View
+                          </button>
+                          {afterUrl && (
+                            <a
+                              href={afterUrl}
+                              download="fabricviz-render.jpg"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[10px] font-semibold transition-colors"
+                              title="Download"
+                            >
+                              <Download size={11} /> Save
+                            </a>
+                          )}
+                          <button
+                            onClick={() => setConfirmDeleteId(confirmDeleteId === item.id ? null : item.id)}
+                            className="py-1.5 px-2 rounded-lg bg-red-500/20 hover:bg-red-500/40 text-red-400 transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 size={11} />
+                          </button>
                         </div>
-                      )}
+
+                        {/* Delete confirmation */}
+                        {confirmDeleteId === item.id && (
+                          <div className="mt-1 flex gap-1.5">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setConfirmDeleteId(null)}
+                              className="flex-1 h-7 text-[10px] border-white/20 text-white/70 hover:bg-white/10"
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => handleDeleteHistory(item.id)}
+                              className="flex-1 h-7 text-[10px] bg-red-600 hover:bg-red-700 text-white"
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   );
                 })}

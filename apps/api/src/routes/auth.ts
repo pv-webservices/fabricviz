@@ -214,6 +214,8 @@ export default async function authRoutes(fastify: FastifyInstance) {
             name: ac?.customer_name ?? user.customerName ?? null,
             company: ac?.company_name ?? null,
             featureFlags: ac?.feature_flags ?? [],
+            credit_limit: ac?.credit_limit ?? null,
+            credits_used: ac?.credits_used ?? null,
           }),
         );
       } else if (user.type === 'admin') {

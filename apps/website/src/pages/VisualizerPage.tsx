@@ -159,20 +159,38 @@ export default function VisualizerPage() {
     const token = localStorage.getItem('customer_token');
     if (!token) return;
     try {
-      const res = await fetch(`${API_URL}/api/auth/me`, {
+      // First try /api/auth/me for access_code tokens
+      let res = await fetch(`${API_URL}/api/auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      
+      // If 403, it might be a customer_user token, so try /api/auth/customer/me
+      if (res.status === 403) {
+        res = await fetch(`${API_URL}/api/auth/customer/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      }
+
       const json = await res.json();
+      // Access code payload
       if (json.success && json.data && json.data.type === 'customer') {
-        // access-code customers: credit_limit = credits remaining, credits_used = used so far
         const remaining = json.data.credit_limit;
         const used = json.data.credits_used ?? 0;
         if (remaining !== null && remaining !== undefined) {
           setCredits(Number(remaining));
           setTotalCredits(Number(remaining) + Number(used));
         }
+      } 
+      // Customer user payload
+      else if (json.success && json.data && json.data.credit_limit !== undefined) {
+        const limit = json.data.credit_limit;
+        const used = json.data.credits_used ?? 0;
+        if (limit !== null && limit !== undefined) {
+          const remaining = Math.max(0, limit - used);
+          setCredits(remaining);
+          setTotalCredits(limit);
+        }
       }
-      // customer_user tokens return type !== 'customer' — credits remain null (N/A)
     } catch {
       // silent
     }

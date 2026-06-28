@@ -22,6 +22,7 @@ export async function createRenderJob(
   renderQueue: Queue,
   data: CreateRenderInput,
   accessCodeId?: string,
+  customerId?: string
 ): Promise<{ jobId: string; visualizationId: string; areasCount: number }> {
 
   // -- Multi-area flow ---------------------------------------------------------
@@ -60,7 +61,7 @@ export async function createRenderJob(
       throw new Error('Render requires a valid room image URL. Neither a predefined room image nor an uploaded photo URL was provided.');
     }
 
-    // 3. Check credits � exactly 1 credit required per render job
+    // 3. Check credits  exactly 1 credit required per render job
     if (accessCodeId) {
       const creditCheck = await db.query(
         `SELECT credit_limit FROM access_codes WHERE id = $1`,
@@ -70,6 +71,19 @@ export async function createRenderJob(
         throw new Error('Access code not found');
       }
       if ((creditCheck.rows[0].credit_limit as number) < 1) {
+        throw new Error('Insufficient credits');
+      }
+    } else if (customerId) {
+      const creditCheck = await db.query(
+        `SELECT credit_limit, credits_used FROM customers WHERE id = $1`,
+        [customerId],
+      );
+      if (creditCheck.rowCount === 0) {
+        throw new Error('Customer not found');
+      }
+      const limit = creditCheck.rows[0].credit_limit;
+      const used = creditCheck.rows[0].credits_used;
+      if (limit !== null && limit !== undefined && used >= limit) {
         throw new Error('Insufficient credits');
       }
     }
@@ -123,12 +137,13 @@ export async function createRenderJob(
 
     const visResult = await db.query(
       `INSERT INTO visualizations
-         (access_code_id, fabric_id, room_id, uploaded_photo_url, object_type, source_type, status,
+         (access_code_id, customer_id, fabric_id, room_id, uploaded_photo_url, object_type, source_type, status,
           area_assignments, model, composed_prompt, areas_count)
-       VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7, $8, $9, $10)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', $8, $9, $10, $11)
        RETURNING id`,
       [
         accessCodeId ?? null,
+        customerId ?? null,
         firstFabricId,
         data.roomId ?? null,
         data.uploadedPhotoUrl ?? null,
@@ -229,10 +244,11 @@ export async function createRenderJob(
 
   // 3. Create visualization record
   const visResult = await db.query(
-    `INSERT INTO visualizations (access_code_id, fabric_id, room_id, uploaded_photo_url, object_type, source_type, status)
-     VALUES ($1, $2, $3, $4, $5, $6, 'pending') RETURNING id`,
+    `INSERT INTO visualizations (access_code_id, customer_id, fabric_id, room_id, uploaded_photo_url, object_type, source_type, status)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending') RETURNING id`,
     [
       accessCodeId ?? null,
+      customerId ?? null,
       legacyFabricId,
       data.roomId ?? null,
       data.uploadedPhotoUrl ?? null,

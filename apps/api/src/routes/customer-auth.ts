@@ -154,7 +154,7 @@ export default async function customerAuthRoutes(fastify: FastifyInstance) {
       }
 
       const result = await fastify.db.query(
-        'SELECT id, full_name, email, mobile, country_code, company, city, created_at, is_active FROM customers WHERE id = $1',
+        'SELECT id, full_name, email, mobile, country_code, company, city, created_at, is_active, credit_limit, credits_used FROM customers WHERE id = $1',
         [user.customerId]
       );
       

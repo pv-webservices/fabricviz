@@ -25,10 +25,12 @@ export default async function historyRoutes(fastify: FastifyInstance) {
 
       const user = request.user as TokenPayload;
       const accessCodeId = 'accessCodeId' in user ? user.accessCodeId : undefined;
+      const customerId = 'customerId' in user ? user.customerId : undefined;
 
       // Customers only see their own. Admins see all unless they specify a filter (omitted here for simplicity, but service supports it).
       const result = await getHistory(fastify.db, {
         accessCodeId,
+        customerId,
         page: parsed.data.page,
         limit: parsed.data.limit,
       });
@@ -44,8 +46,9 @@ export default async function historyRoutes(fastify: FastifyInstance) {
     async (request: any, reply: any) => {
       const user = request.user as TokenPayload;
       const accessCodeId = 'accessCodeId' in user ? user.accessCodeId : undefined;
+      const customerId = 'customerId' in user ? user.customerId : undefined;
 
-      const item = await getHistoryItem(fastify.db, request.params.id, accessCodeId);
+      const item = await getHistoryItem(fastify.db, request.params.id, accessCodeId, customerId);
       if (!item) {
         return reply.status(404).send(error('NOT_FOUND', 'Visualization not found'));
       }
@@ -63,9 +66,10 @@ export default async function historyRoutes(fastify: FastifyInstance) {
   const deleteHandler = async (request: any, reply: any) => {
     const user = request.user as TokenPayload;
     const accessCodeId = 'accessCodeId' in user ? user.accessCodeId : undefined;
+    const customerId = 'customerId' in user ? user.customerId : undefined;
     
-    // For customers, item must belong to their accessCodeId
-    const item = await getHistoryItem(fastify.db, request.params.id, accessCodeId);
+    // For customers, item must belong to their accessCodeId or customerId
+    const item = await getHistoryItem(fastify.db, request.params.id, accessCodeId, customerId);
     if (!item) {
       return reply.status(404).send(error('NOT_FOUND', 'Visualization not found or not owned by you'));
     }

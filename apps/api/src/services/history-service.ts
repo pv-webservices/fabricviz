@@ -2,6 +2,7 @@ import { Pool } from 'pg';
 
 export interface HistoryFilter {
   accessCodeId?: string;
+  customerId?: string;
   status?: string;
   objectType?: string;
   sortBy?: string;
@@ -17,6 +18,9 @@ export async function getHistory(db: Pool, filters: HistoryFilter) {
   if (filters.accessCodeId) {
     conditions.push(`v.access_code_id = $${idx++}`);
     params.push(filters.accessCodeId);
+  } else if (filters.customerId) {
+    conditions.push(`v.customer_id = $${idx++}`);
+    params.push(filters.customerId);
   }
   if (filters.status) {
     conditions.push(`v.status = $${idx++}`);
@@ -42,7 +46,7 @@ export async function getHistory(db: Pool, filters: HistoryFilter) {
   const query = `
     SELECT 
       v.id, v.object_type, v.source_type, v.status, v.before_url, v.after_url, v.pdf_url, v.created_at,
-      f.name as fabric_name, f.thumbnail_url as fabric_thumbnail,
+      f.name as fabric_name, COALESCE(f.swatch_url, f.texture_url) as fabric_thumbnail,
       r.name as room_name
     FROM visualizations v
     LEFT JOIN fabrics f ON v.fabric_id = f.id
@@ -62,20 +66,24 @@ export async function getHistory(db: Pool, filters: HistoryFilter) {
   };
 }
 
-export async function getHistoryItem(db: Pool, id: string, accessCodeId?: string) {
+export async function getHistoryItem(db: Pool, id: string, accessCodeId?: string, customerId?: string) {
   const conditions = ['v.id = $1', 'v.active = true'];
   const params: unknown[] = [id];
+  let idx = 2;
 
   if (accessCodeId) {
-    conditions.push('v.access_code_id = $2');
+    conditions.push(`v.access_code_id = $${idx++}`);
     params.push(accessCodeId);
+  } else if (customerId) {
+    conditions.push(`v.customer_id = $${idx++}`);
+    params.push(customerId);
   }
 
   const query = `
     SELECT 
       v.*,
       f.name as fabric_name,
-      f.thumbnail_url as fabric_thumbnail,
+      COALESCE(f.swatch_url, f.texture_url) as fabric_thumbnail,
       f.color_family,
       f.end_use as fabric_end_use,
       c.name as collection_name,

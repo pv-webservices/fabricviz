@@ -25,9 +25,10 @@ export default async function renderRoutes(fastify: FastifyInstance) {
 
       const user = request.user as TokenPayload;
       const accessCodeId = 'accessCodeId' in user ? (user as any).accessCodeId : undefined;
+      const customerId = 'customerId' in user ? (user as any).customerId : undefined;
 
       try {
-        const result = await createRenderJob(fastify.db, renderQueue, parsed.data, accessCodeId);
+        const result = await createRenderJob(fastify.db, renderQueue, parsed.data, accessCodeId, customerId);
 
         // Track analytics event
         if (isMultiAreaInput(parsed.data)) {
@@ -63,6 +64,7 @@ export default async function renderRoutes(fastify: FastifyInstance) {
 
         return reply.status(201).send(success(result));
       } catch (err) {
+        fastify.log.error(err);
         const message = err instanceof Error ? err.message : 'Unknown error';
         if (message.includes('not found') || message.includes('inactive')) {
           return reply.status(404).send(error('NOT_FOUND', message));

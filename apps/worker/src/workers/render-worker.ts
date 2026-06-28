@@ -1,4 +1,4 @@
-﻿import { Worker, Job } from 'bullmq';
+import { Worker, Job } from 'bullmq';
 import Redis from 'ioredis';
 import { Pool } from 'pg';
 import { QUEUE_NAME } from '../queues/render-queue';
@@ -177,31 +177,51 @@ export function setupRenderWorker(connection: Redis, db: Pool) {
 
         // 7. Deduct credit
         const visRow = await db.query(
-          `SELECT access_code_id FROM visualizations WHERE id = $1`,
+          `SELECT access_code_id, customer_id FROM visualizations WHERE id = $1`,
           [visualizationId],
         );
-        if (visRow.rowCount && visRow.rowCount > 0 && visRow.rows[0].access_code_id) {
-          const accessCodeId: string = visRow.rows[0].access_code_id;
-          await db.query(
-            `UPDATE access_codes SET credit_limit = GREATEST(credit_limit - 1, 0) WHERE id = $1`,
-            [accessCodeId],
-          );
-          await db.query(
-            `INSERT INTO credit_transactions (access_code_id, amount, reason)
-             VALUES ($1, -1, 'render_job_completed')`,
-            [accessCodeId],
-          );
-          console.log(`[Job ${job.id}] Deducted 1 credit from access code ${accessCodeId}.`);
+        if (visRow.rowCount && visRow.rowCount > 0) {
+          const accessCodeId = visRow.rows[0].access_code_id;
+          const customerId = visRow.rows[0].customer_id;
+          
+          if (accessCodeId) {
+            await db.query(
+              `UPDATE access_codes SET credit_limit = GREATEST(credit_limit - 1, 0), credits_used = credits_used + 1 WHERE id = $1`,
+              [accessCodeId],
+            );
+            await db.query(
+              `INSERT INTO credit_transactions (access_code_id, amount, reason)
+               VALUES ($1, -1, 'render_job_completed')`,
+              [accessCodeId],
+            );
+            console.log(`[Job ${job.id}] Deducted 1 credit from access code ${accessCodeId}.`);
 
-          // Enforce 30-item history limit
-          await db.query(
-            `WITH top_30 AS (
-               SELECT id FROM visualizations WHERE access_code_id = $1 ORDER BY created_at DESC LIMIT 30
-             )
-             DELETE FROM visualizations WHERE access_code_id = $1 AND id NOT IN (SELECT id FROM top_30)`,
-            [accessCodeId]
-          );
-          console.log(`[Job ${job.id}] Enforced 30-item history limit for access code ${accessCodeId}.`);
+            // Enforce 30-item history limit
+            await db.query(
+              `WITH top_30 AS (
+                 SELECT id FROM visualizations WHERE access_code_id = $1 ORDER BY created_at DESC LIMIT 30
+               )
+               DELETE FROM visualizations WHERE access_code_id = $1 AND id NOT IN (SELECT id FROM top_30)`,
+              [accessCodeId]
+            );
+            console.log(`[Job ${job.id}] Enforced 30-item history limit for access code ${accessCodeId}.`);
+          } else if (customerId) {
+            await db.query(
+              `UPDATE customers SET credits_used = credits_used + 1 WHERE id = $1`,
+              [customerId],
+            );
+            console.log(`[Job ${job.id}] Deducted 1 credit from customer ${customerId}.`);
+
+            // Enforce 30-item history limit
+            await db.query(
+              `WITH top_30 AS (
+                 SELECT id FROM visualizations WHERE customer_id = $1 ORDER BY created_at DESC LIMIT 30
+               )
+               DELETE FROM visualizations WHERE customer_id = $1 AND id NOT IN (SELECT id FROM top_30)`,
+              [customerId]
+            );
+            console.log(`[Job ${job.id}] Enforced 30-item history limit for customer ${customerId}.`);
+          }
         }
 
         console.log(`[Job ${job.id}] Render completed successfully!`);

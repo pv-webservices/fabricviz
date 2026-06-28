@@ -1,19 +1,21 @@
 export function getSofaRecipe(fabricName: string, tags: string[] = []): string {
   const safeTags = tags || [];
   const characteristics = safeTags.length > 0 ? `Characteristics: ${safeTags.join(', ')}.` : '';
-  return `Generate a high-quality photorealistic image of a modern sofa draped perfectly in ${fabricName} fabric. ${characteristics}
+  return `You are a strict photorealistic image editor. I have provided a [BASE_ROOM_TO_EDIT] image and a [FABRIC_SWATCH_REFERENCE]. Edit the [BASE_ROOM_TO_EDIT] image to drape the sofa perfectly in ${fabricName} fabric. ${characteristics}
+KEEP EVERY OTHER PIXEL EXACTLY THE SAME. Do not generate a new room.
 The fabric must conform tightly to the arm contours and seat seams, displaying realistic shadow depth and natural fabric tension.
 Ensure the fabric pattern repeat scale and orientation are precisely maintained across all cushions.
-Maintain realistic ambient room lighting, sharp focus, and premium interior design aesthetic. No extra elements.`;
+Maintain realistic ambient room lighting, sharp focus, and premium interior design aesthetic. Output quality constraint: Generate the image at a maximum resolution of 1024x1024 (1k quality). Do not exceed 1k quality.`;
 }
 
 export function getCurtainRecipe(fabricName: string, tags: string[] = []): string {
   const safeTags = tags || [];
   const characteristics = safeTags.length > 0 ? `Characteristics: ${safeTags.join(', ')}.` : '';
-  return `Generate a high-quality photorealistic image of floor-to-length curtains made of ${fabricName} fabric. ${characteristics}
+  return `You are a strict photorealistic image editor. I have provided a [BASE_ROOM_TO_EDIT] image and a [FABRIC_SWATCH_REFERENCE]. Edit the [BASE_ROOM_TO_EDIT] image to replace the curtains with ${fabricName} fabric. ${characteristics}
+KEEP EVERY OTHER PIXEL EXACTLY THE SAME. Do not generate a new room.
 The fabric must hang with natural, deep vertical pleats, preserving realistic fold shadows and light absorption.
 Ensure the pattern repeat is continuous and scaled correctly for a large drape.
-Maintain realistic window lighting from behind the curtain, sharp focus, and premium interior design aesthetic. No extra elements.`;
+Maintain realistic window lighting from behind the curtain, sharp focus, and premium interior design aesthetic. Output quality constraint: Generate the image at a maximum resolution of 1024x1024 (1k quality). Do not exceed 1k quality.`;
 }
 
 export function buildPrompt(objectType: string, fabricName: string, tags: string[] = []): string {

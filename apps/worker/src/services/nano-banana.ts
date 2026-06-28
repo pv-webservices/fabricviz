@@ -24,15 +24,15 @@ export class NanoBananaService {
     }
   }
 
-  async generateImage(prompt: string, sourceImageUrl?: string | null, model: 'fast' | 'pro' = 'fast'): Promise<NanoBananaResponse> {
+  public async generateImage(prompt: string, sourceImageUrl?: string | null, model: 'fast' | 'pro' = 'fast', referenceImageUrls: string[] = []): Promise<NanoBananaResponse> {
     if (this.useMock) {
       return this.generateImageMock(prompt);
     }
-    return this.generateImageReal(prompt, sourceImageUrl, model);
+    return this.generateImageReal(prompt, sourceImageUrl, model, referenceImageUrls);
   }
 
   // ── Real API implementation ────────────────────────────────────────────
-  private async generateImageReal(prompt: string, sourceImageUrl?: string | null, model: 'fast' | 'pro' = 'fast'): Promise<NanoBananaResponse> {
+  private async generateImageReal(prompt: string, sourceImageUrl?: string | null, model: 'fast' | 'pro' = 'fast', referenceImageUrls: string[] = []): Promise<NanoBananaResponse> {
     console.log(`[NanoBanana] LIVE call — prompt: ${prompt.substring(0, 50)}...`);
 
     const controller = new AbortController();
@@ -43,18 +43,54 @@ export class NanoBananaService {
       const isGeminiKey = this.apiKey.startsWith('AIza') || this.apiKey.startsWith('AQ.');
       
       let response: Response;
-      
       if (isGeminiKey) {
-        // Use Google AI Studio Imagen 4.0 API
-        console.log(`[NanoBanana] Using Google AI Studio Imagen API (${model})`);
-        const modelEndpoint = model === 'fast' ? 'imagen-4.0-fast-generate-001' : 'imagen-4.0-generate-001';
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelEndpoint}:predict?key=${this.apiKey}`;
+        // Use Google AI Studio Gemini Image API (Nano Banana models)
+        console.log(`[NanoBanana] Using Google AI Studio Gemini API (${model})`);
+        const modelEndpoint = model === 'fast' ? 'gemini-3.1-flash-image' : 'gemini-3-pro-image';
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelEndpoint}:generateContent?key=${this.apiKey}`;
+        
+        let parts: any[] = [{ text: "INSTRUCTIONS:\n" + prompt + "\n\n" }];
+        
+        // Helper function to fetch and encode image
+        const fetchAndEncode = async (url: string, label: string) => {
+          try {
+            console.log(`[NanoBanana] Fetching ${label} image: ${url}`);
+            const imgRes = await fetch(url);
+            if (!imgRes.ok) throw new Error(`HTTP ${imgRes.status}`);
+            const arrayBuffer = await imgRes.arrayBuffer();
+            const base64Data = Buffer.from(arrayBuffer).toString('base64');
+            const mimeType = imgRes.headers.get('content-type') || 'image/jpeg';
+            
+            parts.push({ text: `\n--- [${label}] ---\n` });
+            parts.push({
+              inlineData: {
+                mimeType,
+                data: base64Data
+              }
+            });
+            console.log(`[NanoBanana] Attached ${label} image (${Math.round(base64Data.length / 1024)} KB)`);
+          } catch (e) {
+            console.error(`[NanoBanana] Failed to fetch ${label} image:`, e);
+          }
+        };
+
+        if (sourceImageUrl) {
+          await fetchAndEncode(sourceImageUrl, "BASE_ROOM_TO_EDIT");
+        }
+        
+        for (let i = 0; i < referenceImageUrls.length; i++) {
+          const refUrl = referenceImageUrls[i];
+          if (refUrl) {
+            await fetchAndEncode(refUrl, `FABRIC_SWATCH_REFERENCE_${i + 1}`);
+          }
+        }
+
         response = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            instances: [{ prompt }],
-            parameters: { sampleCount: 1 }
+            contents: [{ parts }],
+            generationConfig: { responseModalities: ["IMAGE"] }
           }),
           signal: controller.signal,
         });
@@ -85,17 +121,21 @@ export class NanoBananaService {
 
       if (isGeminiKey) {
         const data = await response.json() as any;
-        if (data.predictions && data.predictions.length > 0) {
-          const base64 = data.predictions[0].bytesBase64Encoded || data.predictions[0].bytesBase64;
-          const mimeType = data.predictions[0].mimeType || 'image/png';
-          const buffer = Buffer.from(base64, 'base64');
-          
-          const uploadedUrl = await uploadFile(buffer, 'generated.png', mimeType);
-          
-          return { success: true, imageUrl: uploadedUrl };
-        } else {
-          return { success: false, error: 'Google AI Studio returned no predictions.' };
+        if (data.error) {
+          return { success: false, error: `Gemini API Error: ${data.error.message}` };
         }
+        
+        const imgPart = data.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData);
+        if (!imgPart) {
+          return { success: false, error: 'Google AI Studio returned no image data.' };
+        }
+        
+        const base64 = imgPart.inlineData.data;
+        const mimeType = imgPart.inlineData.mimeType || 'image/jpeg';
+        const buffer = Buffer.from(base64, 'base64');
+        
+        const uploadedUrl = await uploadFile(buffer, 'generated.jpeg', mimeType);
+        return { success: true, imageUrl: uploadedUrl };
       } else {
         const data = (await response.json()) as NanoBananaResponse;
         return data;

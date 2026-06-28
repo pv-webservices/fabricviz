@@ -83,6 +83,9 @@ export default function VisualizerPage() {
   const [credits, setCredits] = useState<number | null>(null);
   const [totalCredits, setTotalCredits] = useState<number | null>(null);
 
+  // History state
+  const [historyCount, setHistoryCount] = useState<number>(0);
+
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ── Auth guard ──────────────────────────────────────────────────────────────
@@ -134,11 +137,28 @@ export default function VisualizerPage() {
     }
   }, []);
 
+  const fetchHistoryCount = useCallback(async () => {
+    const token = localStorage.getItem('customer_token');
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_URL}/api/history?limit=1`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      if (json.success && json.data) {
+        setHistoryCount(json.data.total || 0);
+      }
+    } catch (err) {
+      console.error('Failed to fetch history', err);
+    }
+  }, []);
+
   useEffect(() => {
     if (isAuthenticated) {
       fetchCredits();
+      fetchHistoryCount();
     }
-  }, [isAuthenticated, fetchCredits]);
+  }, [isAuthenticated, fetchCredits, fetchHistoryCount]);
 
   // ── Cleanup polling on unmount ──────────────────────────────────────────────
 
@@ -188,12 +208,16 @@ export default function VisualizerPage() {
     if (file) {
       const url = URL.createObjectURL(file);
       setSelectedRoom({ id: 'local', name: 'Custom Room', image_url: url });
+      setRenderedImage(null);
+      setAssignments({});
       setStep(2);
     }
   };
 
   const handleRoomSelect = (room: { id: string; name: string; image_url: string }) => {
     setSelectedRoom(room);
+    setRenderedImage(null);
+    setAssignments({});
     setStep(2);
   };
 
@@ -420,7 +444,7 @@ export default function VisualizerPage() {
         <div className="max-w-5xl mx-auto w-full px-4 pt-6 pb-2 flex justify-end gap-6 text-sm font-semibold text-brand-muted">
           <button className="flex items-center gap-2 hover:text-brand-text transition-colors">
             <History size={16} /> History{' '}
-            <span className="bg-brand-terracotta text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1">10</span>
+            <span className="bg-brand-terracotta text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1">{historyCount}</span>
           </button>
           <button onClick={reset} className="flex items-center gap-2 hover:text-brand-text transition-colors">
             <RotateCcw size={16} /> Start over
@@ -437,7 +461,13 @@ export default function VisualizerPage() {
             ].map(({ n, label }) => (
               <div
                 key={n}
-                onClick={() => (step > n ? setStep(n) : undefined)}
+                onClick={() => {
+                  if (step > n) {
+                    setStep(n);
+                  } else if (n === 3 && renderedImage) {
+                    setStep(3);
+                  }
+                }}
                 className={`px-4 md:px-6 py-2 rounded-full flex items-center gap-2 text-sm font-medium transition-colors
                   ${step === n ? 'bg-brand-terracotta text-white' : 'text-brand-muted hover:text-brand-text cursor-pointer'}`}
               >

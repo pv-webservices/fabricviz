@@ -110,8 +110,17 @@ export function setupRenderWorker(connection: Redis, db: Pool) {
         // The NanaBanana service currently supports one source image.
         // Pass the first fabric image as primary reference; include others in prompt as text.
         let finalSourceImage: string | null | undefined = sourceImage;
+        const referenceImageUrls: string[] = [];
+        
         if (areaAssignments && areaAssignments.length > 0) {
           const firstFabricImage = areaAssignments.find((a) => a.fabricImageUrl)?.fabricImageUrl;
+          
+          for (const a of areaAssignments) {
+            if (a.fabricImageUrl && !referenceImageUrls.includes(a.fabricImageUrl)) {
+              referenceImageUrls.push(a.fabricImageUrl);
+            }
+          }
+          
           // We intentionally keep the room image as the primary source for transformation.
           // Fabric swatches are described in the prompt.
           if (areaAssignments.length > 1) {
@@ -130,7 +139,7 @@ export function setupRenderWorker(connection: Redis, db: Pool) {
         }
 
         // 4. Call Nano Banana Service
-        const result = await nanoBanana.generateImage(prompt, finalSourceImage, model as 'fast' | 'pro');
+        const result = await nanoBanana.generateImage(prompt, finalSourceImage, model as 'fast' | 'pro', referenceImageUrls);
 
         if (!result.success || !result.imageUrl) {
           throw new Error(result.error || 'Failed to generate image');
@@ -168,6 +177,16 @@ export function setupRenderWorker(connection: Redis, db: Pool) {
             [accessCodeId],
           );
           console.log(`[Job ${job.id}] Deducted 1 credit from access code ${accessCodeId}.`);
+
+          // Enforce 50-item history limit for this user
+          await db.query(
+            `WITH top_50 AS (
+               SELECT id FROM visualizations WHERE access_code_id = $1 ORDER BY created_at DESC LIMIT 50
+             )
+             DELETE FROM visualizations WHERE access_code_id = $1 AND id NOT IN (SELECT id FROM top_50)`,
+            [accessCodeId]
+          );
+          console.log(`[Job ${job.id}] Enforced 50-item history limit for access code ${accessCodeId}.`);
         }
 
         console.log(`[Job ${job.id}] Render completed successfully!`);

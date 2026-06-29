@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
 import { useNavigate } from 'react-router-dom';
 import { useCustomerAuth } from '../context/CustomerAuthContext';
 import {
@@ -76,8 +75,16 @@ interface HistoryItem {
 
 interface AreaAssignmentRecord {
   areaKey: string;
+  areaLabel: string | null;
+  fabricId: string;
   fabricName: string;
   fabricCode: string;
+  collectionName: string | null;
+  category: string | null;
+  fabricImageUrl: string | null;
+  swatchImageUrl: string | null;
+  fabricColorDescription: string;
+  fabricTextureDescription: string;
 }
 
 type ModelChoice = 'fast' | 'pro';
@@ -291,17 +298,17 @@ export default function VisualizerPage() {
 
       if (item.area_assignments && Array.isArray(item.area_assignments)) {
         const newAssignments: Record<string, AssignedFabric> = {};
-        item.area_assignments.forEach((assignment: any) => {
+        item.area_assignments.forEach((assignment) => {
           if (assignment.areaKey && assignment.fabricId) {
             newAssignments[assignment.areaKey] = {
-              id: assignment.fabricId,
-              name: assignment.fabricName || 'Unknown Fabric',
-              texture_url: assignment.fabricUrl || '',
-              swatch_url: assignment.fabricUrl || '',
-              collection_id: '',
-              color_family: '',
-              end_use: [],
-              active: true
+              fabricId: assignment.fabricId,
+              fabricName: assignment.fabricName || 'Unknown Fabric',
+              fabricCode: assignment.fabricCode || '',
+              collectionName: assignment.collectionName || '',
+              image_url: assignment.swatchImageUrl || assignment.fabricImageUrl || '',
+              fabricColorDescription: assignment.fabricColorDescription || '',
+              fabricTextureDescription: assignment.fabricTextureDescription || '',
+              fabricImageUrl: assignment.fabricImageUrl || null,
             };
           }
         });
@@ -473,33 +480,149 @@ export default function VisualizerPage() {
     }
   };
 
-  const pdfRef = useRef<HTMLDivElement>(null);
-
   const handleDownloadPdf = async () => {
-    if (!renderedImage || !pdfRef.current) return;
+    if (!renderedImage) return;
     toast({ title: 'Generating PDF...', description: 'Please wait while we prepare your file.' });
+
+    // Resolve which fabric rows to show — prefer live assignments, fall back to history snapshot
+    const fabricRows: Array<{ areaKey: string; areaLabel: string; fabricName: string; fabricCode: string; collectionName: string; category: string; imageUrl: string }> =
+      assignedEntries.length > 0
+        ? assignedEntries.map(([areaId, fabric]) => ({
+            areaKey: areaId,
+            areaLabel: formatAreaLabel(areaId),
+            fabricName: fabric.fabricName,
+            fabricCode: fabric.fabricCode,
+            collectionName: fabric.collectionName || '',
+            category: STYLE_AREAS.find((a) => a.id === areaId)?.category ?? '',
+            imageUrl: fabric.image_url || fabric.fabricImageUrl || '',
+          }))
+        : [];
+
+    const toDataURL = async (url: string): Promise<string | null> => {
+      if (!url) return null;
+      try {
+        const fullUrl = url.startsWith('http') || url.startsWith('blob:') || url.startsWith('data:')
+          ? url
+          : `${API_URL}${url}`;
+        const res = await fetch(fullUrl);
+        const blob = await res.blob();
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(blob);
+        });
+      } catch {
+        return null;
+      }
+    };
+
     try {
-      // Small delay to ensure images are loaded
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      const canvas = await html2canvas(pdfRef.current, { 
-        scale: 2, 
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff'
-      });
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'px',
-        format: [canvas.width, canvas.height]
-      });
-      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
-      pdf.save('fabricviz-render.pdf');
-      toast({ title: 'Success', description: 'PDF downloaded successfully.' });
-    } catch (error) {
-      console.error('PDF generation failed', error);
-      toast({ title: 'Error', description: 'Failed to generate PDF.', variant: 'destructive' });
+      const PAGE_W = 595;
+      const PAGE_H = 842;
+      const MARGIN = 36;
+      const CONTENT_W = PAGE_W - MARGIN * 2;
+
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+
+      // ── Header ──────────────────────────────────────────────────────────────
+      pdf.setFillColor(30, 26, 20);
+      pdf.rect(0, 0, PAGE_W, 56, 'F');
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(18);
+      pdf.setTextColor(201, 160, 96);
+      pdf.text('DARPAN LIVE', MARGIN, 35);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(8);
+      pdf.setTextColor(160, 150, 135);
+      pdf.text('Fabric Visualizer Report', MARGIN, 48);
+      pdf.setFontSize(8);
+      pdf.setTextColor(120, 110, 100);
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+      const dateW = pdf.getStringUnitWidth(dateStr) * 8;
+      pdf.text(dateStr, PAGE_W - MARGIN - dateW, 35);
+
+      let cursorY = 72;
+
+      // ── Rendered image ───────────────────────────────────────────────────────
+      const imgData = await toDataURL(renderedImage);
+      if (imgData) {
+        const imgH = Math.round((CONTENT_W * 4) / 3);
+        pdf.addImage(imgData, 'JPEG', MARGIN, cursorY, CONTENT_W, imgH);
+        cursorY += imgH + 16;
+      }
+
+      // ── Section title ────────────────────────────────────────────────────────
+      if (fabricRows.length > 0) {
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(11);
+        pdf.setTextColor(28, 28, 28);
+        pdf.text(`Fabrics Used (${fabricRows.length})`, MARGIN, cursorY);
+        cursorY += 14;
+
+        pdf.setDrawColor(220, 215, 208);
+        pdf.line(MARGIN, cursorY, PAGE_W - MARGIN, cursorY);
+        cursorY += 10;
+
+        for (const row of fabricRows) {
+          // Add page if needed
+          if (cursorY + 60 > PAGE_H - 60) {
+            pdf.addPage();
+            cursorY = MARGIN;
+          }
+
+          const SWATCH_SIZE = 44;
+          const swatchData = await toDataURL(row.imageUrl);
+          if (swatchData) {
+            pdf.addImage(swatchData, 'JPEG', MARGIN, cursorY, SWATCH_SIZE, SWATCH_SIZE);
+          } else {
+            pdf.setFillColor(242, 237, 228);
+            pdf.rect(MARGIN, cursorY, SWATCH_SIZE, SWATCH_SIZE, 'F');
+          }
+
+          const textX = MARGIN + SWATCH_SIZE + 10;
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(7);
+          pdf.setTextColor(199, 91, 58);
+          pdf.text(row.areaLabel.toUpperCase(), textX, cursorY + 10);
+
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(10);
+          pdf.setTextColor(28, 28, 28);
+          pdf.text(row.fabricName, textX, cursorY + 23);
+
+          pdf.setFont('helvetica', 'normal');
+          pdf.setFontSize(8);
+          pdf.setTextColor(107, 99, 85);
+          const meta = [row.fabricCode, row.collectionName || row.category].filter(Boolean).join('  ·  ');
+          if (meta) pdf.text(meta, textX, cursorY + 35);
+
+          cursorY += SWATCH_SIZE + 10;
+
+          pdf.setDrawColor(235, 230, 222);
+          pdf.line(MARGIN, cursorY, PAGE_W - MARGIN, cursorY);
+          cursorY += 8;
+        }
+      }
+
+      // ── Disclaimer ───────────────────────────────────────────────────────────
+      if (cursorY + 40 > PAGE_H - 30) {
+        pdf.addPage();
+        cursorY = MARGIN;
+      }
+      cursorY += 12;
+      pdf.setFont('helvetica', 'italic');
+      pdf.setFontSize(7);
+      pdf.setTextColor(150, 140, 130);
+      const disclaimer =
+        'This is an AI-generated visualization for idea generation only. Scale, colour, and texture may vary from the actual fabric. Always refer to the physical swatch in the Darpan Live Catalog before final selection.';
+      const lines = pdf.splitTextToSize(disclaimer, CONTENT_W);
+      pdf.text(lines, MARGIN, cursorY);
+
+      pdf.save('darpanlive-fabric-concept.pdf');
+      toast({ title: 'PDF Ready', description: 'Your design report has been downloaded.' });
+    } catch {
+      toast({ title: 'Error', description: 'Failed to generate PDF. Please try again.', variant: 'destructive' });
     }
   };
 
@@ -587,15 +710,23 @@ export default function VisualizerPage() {
 
     const areaAssignments = (Object.entries(assignments) as [string, AssignedFabric | null][])
       .filter(([, v]) => v !== null)
-      .map(([areaKey, v]) => ({
-        areaKey,
-        fabricId: (v as AssignedFabric).fabricId,
-        fabricName: (v as AssignedFabric).fabricName,
-        fabricCode: (v as AssignedFabric).fabricCode,
-        fabricColorDescription: (v as AssignedFabric).fabricColorDescription,
-        fabricTextureDescription: (v as AssignedFabric).fabricTextureDescription,
-        fabricImageUrl: (v as AssignedFabric).fabricImageUrl,
-      }));
+      .map(([areaKey, v]) => {
+        const fabric = v as AssignedFabric;
+        const areaObj = STYLE_AREAS.find((a) => a.id === areaKey);
+        return {
+          areaKey,
+          areaLabel: areaObj?.label ?? areaKey,
+          category: areaObj?.category ?? null,
+          fabricId: fabric.fabricId,
+          fabricName: fabric.fabricName,
+          fabricCode: fabric.fabricCode,
+          collectionName: fabric.collectionName || null,
+          fabricColorDescription: fabric.fabricColorDescription,
+          fabricTextureDescription: fabric.fabricTextureDescription,
+          fabricImageUrl: fabric.fabricImageUrl,
+          swatchImageUrl: fabric.image_url || null,
+        };
+      });
 
     const isLocalRoom = selectedRoom.id === 'local';
     const payload = {
@@ -1342,60 +1473,6 @@ export default function VisualizerPage() {
           </div>
         </div>
       </div>
-      {/* --- HIDDEN PDF TEMPLATE --- */}
-      <div 
-        style={{ position: 'absolute', top: '-9999px', left: '-9999px', width: '800px', backgroundColor: 'white' }}
-      >
-        <div ref={pdfRef} className="bg-white text-black p-8 w-[800px] flex flex-col gap-6 font-sans">
-          {/* PDF Header */}
-          <div className="flex items-center justify-between border-b pb-4">
-            <h1 className="text-3xl font-bold text-brand-terracotta tracking-tight">FABRICVIZ</h1>
-            <p className="text-gray-500 text-sm">Design Without Compromise</p>
-          </div>
-          
-          {/* Main Rendered Image */}
-          <div className="w-full h-auto rounded-xl overflow-hidden border">
-            {renderedImage && (
-              <img 
-                src={renderedImage.startsWith('http') ? renderedImage : `${API_URL}${renderedImage}`} 
-                alt="Render" 
-                className="w-full h-full object-cover" 
-                crossOrigin="anonymous" 
-              />
-            )}
-          </div>
-
-          {/* Fabric Details */}
-          <div className="flex flex-col gap-4 mt-4">
-            <h2 className="text-xl font-semibold text-brand-text">Fabrics used ({assignedEntries.length})</h2>
-            <div className="flex flex-col gap-4">
-              {assignedEntries.map(([areaId, fabric]) => (
-                <div key={areaId} className="flex gap-4 items-start border-b pb-4">
-                  <div className="w-24 h-24 rounded-lg overflow-hidden border shrink-0">
-                    <img 
-                      src={fabric.image_url} 
-                      alt={fabric.fabricName} 
-                      className="w-full h-full object-cover" 
-                      crossOrigin="anonymous" 
-                    />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-xs uppercase text-brand-terracotta font-bold mb-1">
-                      {formatAreaLabel(areaId)}
-                    </span>
-                    <span className="text-lg font-semibold text-black">{fabric.fabricName}</span>
-                    <span className="text-sm text-gray-600 mt-1">
-                      {fabric.fabricCode && `Code: ${fabric.fabricCode} • `}
-                      {fabric.collectionName || fabric.category || 'Standard'}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-      {/* --------------------------- */}
     </div>
   );
 }

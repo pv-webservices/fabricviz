@@ -29,6 +29,11 @@ const areaAssignmentSchema = z.object({
   fabricColorDescription: z.string().default(''),
   fabricTextureDescription: z.string().default(''),
   fabricImageUrl: z.string().url('Invalid fabric image URL').nullable().default(null),
+  // Snapshot enrichment — optional so old records stay valid
+  collectionName: z.string().nullable().optional(),
+  areaLabel: z.string().nullable().optional(),
+  category: z.string().nullable().optional(),
+  swatchImageUrl: z.string().nullable().optional(),
 });
 
 export type AreaAssignmentInput = z.infer<typeof areaAssignmentSchema>;

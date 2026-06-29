@@ -76,9 +76,9 @@ export default async function historyRoutes(fastify: FastifyInstance) {
 
     await deleteHistoryItem(fastify.db, request.params.id);
 
-    const userId = 'userId' in user ? user.userId : accessCodeId;
+    const userId = 'userId' in user ? user.userId : undefined;
     await writeAuditLog(fastify.db, {
-      userId: userId || 'customer',
+      userId,
       action: 'visualization_deleted',
       entityType: 'visualization',
       entityId: request.params.id,

@@ -45,7 +45,7 @@ export async function getHistory(db: Pool, filters: HistoryFilter) {
 
   const query = `
     SELECT 
-      v.id, v.object_type, v.source_type, v.status, v.before_url, v.after_url, v.pdf_url, v.created_at,
+      v.id, v.object_type, v.source_type, v.status, v.before_url, v.after_url, v.pdf_url, v.created_at, v.area_assignments,
       f.name as fabric_name, COALESCE(f.swatch_url, f.texture_url) as fabric_thumbnail,
       r.name as room_name
     FROM visualizations v

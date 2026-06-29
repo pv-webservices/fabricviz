@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 import { useNavigate } from 'react-router-dom';
 import { useCustomerAuth } from '../context/CustomerAuthContext';
 import {
@@ -233,6 +235,7 @@ export default function VisualizerPage() {
   }, []);
 
   const handleDeleteHistory = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this result?')) return;
     const token = localStorage.getItem('customer_token');
     if (!token) return;
     try {
@@ -254,6 +257,7 @@ export default function VisualizerPage() {
   };
 
   const handleClearAllHistory = async () => {
+    if (!window.confirm('Are you sure you want to clear all history?')) return;
     const token = localStorage.getItem('customer_token');
     if (!token) return;
     const ids = historyItems.map(i => i.id);
@@ -278,6 +282,32 @@ export default function VisualizerPage() {
   const handleViewHistoryItem = (item: HistoryItem) => {
     if (item.after_url) {
       setRenderedImage(item.after_url.startsWith('http') ? item.after_url : `${API_URL}${item.after_url}`);
+      if (item.before_url) {
+        const beforeUrl = item.before_url.startsWith('http') || item.before_url.startsWith('blob:') 
+          ? item.before_url 
+          : `${API_URL}${item.before_url}`;
+        setSelectedRoom({ id: 'history', name: item.room_name || 'Original Room', image_url: beforeUrl });
+      }
+
+      if (item.area_assignments && Array.isArray(item.area_assignments)) {
+        const newAssignments: Record<string, AssignedFabric> = {};
+        item.area_assignments.forEach((assignment: any) => {
+          if (assignment.areaKey && assignment.fabricId) {
+            newAssignments[assignment.areaKey] = {
+              id: assignment.fabricId,
+              name: assignment.fabricName || 'Unknown Fabric',
+              texture_url: assignment.fabricUrl || '',
+              swatch_url: assignment.fabricUrl || '',
+              collection_id: '',
+              color_family: '',
+              end_use: [],
+              active: true
+            };
+          }
+        });
+        setAssignments(newAssignments);
+      }
+
       setActiveTab('after');
       setStep(3);
       setIsHistoryOpen(false);
@@ -337,14 +367,35 @@ export default function VisualizerPage() {
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 
-  const handleLocalImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLocalImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const url = URL.createObjectURL(file);
-      setSelectedRoom({ id: 'local', name: 'Custom Room', image_url: url });
-      setRenderedImage(null);
-      setAssignments({});
-      setStep(2);
+      toast({ title: 'Uploading...', description: 'Please wait while we upload your image.', variant: 'default' });
+      const formData = new FormData();
+      formData.append('file', file);
+      const token = localStorage.getItem('customer_token') || localStorage.getItem('token');
+      
+      try {
+        const res = await fetch(`${API_URL}/api/uploads`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token ?? ''}`,
+          },
+          body: formData,
+        });
+        const json = await res.json();
+        if (res.ok && json.success && json.data?.url) {
+          const finalUrl = json.data.url.startsWith('http') ? json.data.url : `${API_URL}${json.data.url}`;
+          setSelectedRoom({ id: 'local', name: 'Custom Room', image_url: finalUrl });
+          setRenderedImage(null);
+          setAssignments({});
+          setStep(2);
+        } else {
+          toast({ title: 'Upload failed', description: json.error?.message || 'Failed to upload image.', variant: 'destructive' });
+        }
+      } catch (err) {
+        toast({ title: 'Upload error', description: 'Failed to connect to the server.', variant: 'destructive' });
+      }
     }
   };
 
@@ -379,18 +430,77 @@ export default function VisualizerPage() {
     setAssignments((prev) => ({ ...prev, [areaId]: null }));
   };
 
-  const handleDownloadImage = () => {
-    if (!renderedImage) return;
-    const a = document.createElement('a');
-    a.href = renderedImage;
-    a.download = 'fabricviz-render.jpg';
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
-    a.click();
+  const downloadImage = async (imageUrl: string, filename: string) => {
+    try {
+      const fullUrl = imageUrl.startsWith('http') || imageUrl.startsWith('blob:') || imageUrl.startsWith('data:') 
+        ? imageUrl 
+        : `${API_URL}${imageUrl}`;
+        
+      const response = await fetch(fullUrl, { cache: 'no-cache' });
+      const blob = await response.blob();
+      
+      // Some browsers (like Chrome) lose the filename if we use createObjectURL asynchronously.
+      // We can use a File object to enforce the name if supported, or stick to Blob.
+      const file = new File([blob], filename, { type: blob.type || 'image/jpeg' });
+      const url = window.URL.createObjectURL(file);
+      
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      
+      // Longer delay for Chrome's strict lifecycle
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }, 3000);
+    } catch (error) {
+      console.error('Download failed', error);
+      const a = document.createElement('a');
+      a.href = imageUrl;
+      a.download = filename;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.click();
+    }
   };
 
-  const handleDownloadPdf = () => {
-    toast({ title: 'Coming Soon', description: 'PDF download will be available in the next update.' });
+  const handleDownloadImage = () => {
+    if (renderedImage) {
+      downloadImage(renderedImage, 'fabricviz-render.jpg');
+    }
+  };
+
+  const pdfRef = useRef<HTMLDivElement>(null);
+
+  const handleDownloadPdf = async () => {
+    if (!renderedImage || !pdfRef.current) return;
+    toast({ title: 'Generating PDF...', description: 'Please wait while we prepare your file.' });
+    try {
+      // Small delay to ensure images are loaded
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const canvas = await html2canvas(pdfRef.current, { 
+        scale: 2, 
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'px',
+        format: [canvas.width, canvas.height]
+      });
+      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+      pdf.save('fabricviz-render.pdf');
+      toast({ title: 'Success', description: 'PDF downloaded successfully.' });
+    } catch (error) {
+      console.error('PDF generation failed', error);
+      toast({ title: 'Error', description: 'Failed to generate PDF.', variant: 'destructive' });
+    }
   };
 
   // ── Polling ─────────────────────────────────────────────────────────────────
@@ -628,8 +738,9 @@ export default function VisualizerPage() {
               <div
                 key={n}
                 onClick={() => {
-                  if (step > n) setStep(n);
-                  else if (n === 3 && renderedImage) setStep(3);
+                  if (n === 1) setStep(1);
+                  if (n === 2 && selectedRoom) setStep(2);
+                  if (n === 3 && renderedImage) setStep(3);
                 }}
                 className={`px-4 md:px-6 py-2 rounded-full flex items-center gap-2 text-sm font-medium transition-colors
                   ${step === n ? 'bg-brand-terracotta text-white' : 'text-brand-muted hover:text-brand-text cursor-pointer'}`}
@@ -672,9 +783,6 @@ export default function VisualizerPage() {
                   </div>
                   <p className="text-brand-muted text-sm">
                     Applying {assignedCount} fabric{assignedCount !== 1 ? 's' : ''} to the selected room.
-                  </p>
-                  <p className="text-brand-muted text-xs opacity-60">
-                    Using {selectedModel === 'pro' ? 'Nano Banana Pro' : 'Nano Banana 2.0'} model
                   </p>
                 </div>
               ) : (
@@ -821,20 +929,6 @@ export default function VisualizerPage() {
                       <RotateCcw size={18} className="text-brand-terracotta" />
                       <span className="text-sm font-semibold text-brand-terracotta">Start Fresh</span>
                     </button>
-                  </div>
-
-                  {/* Need help bar */}
-                  <div className="w-full bg-brand-dark rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-3">
-                    <div>
-                      <p className="font-serif text-white font-medium text-base">Need help choosing?</p>
-                      <p className="text-white/60 text-xs">Visit a store or reach out — our team is happy to assist.</p>
-                    </div>
-                    <Button
-                      onClick={() => navigate('/contact')}
-                      className="bg-brand-terracotta hover:opacity-90 text-white shrink-0 text-xs"
-                    >
-                      Contact Us
-                    </Button>
                   </div>
                 </div>
               )}
@@ -1223,46 +1317,22 @@ export default function VisualizerPage() {
                             <Eye size={11} /> View
                           </button>
                           {afterUrl && (
-                            <a
-                              href={afterUrl}
-                              download="fabricviz-render.jpg"
-                              target="_blank"
-                              rel="noopener noreferrer"
+                            <button
+                              onClick={() => downloadImage(afterUrl, 'fabricviz-history-render.jpg')}
                               className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[10px] font-semibold transition-colors"
                               title="Download"
                             >
                               <Download size={11} /> Save
-                            </a>
+                            </button>
                           )}
                           <button
-                            onClick={() => setConfirmDeleteId(confirmDeleteId === item.id ? null : item.id)}
+                            onClick={() => handleDeleteHistory(item.id)}
                             className="py-1.5 px-2 rounded-lg bg-red-500/20 hover:bg-red-500/40 text-red-400 transition-colors"
                             title="Delete"
                           >
                             <Trash2 size={11} />
                           </button>
                         </div>
-
-                        {/* Delete confirmation */}
-                        {confirmDeleteId === item.id && (
-                          <div className="mt-1 flex gap-1.5">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setConfirmDeleteId(null)}
-                              className="flex-1 h-7 text-[10px] border-white/20 text-white/70 hover:bg-white/10"
-                            >
-                              Cancel
-                            </Button>
-                            <Button
-                              size="sm"
-                              onClick={() => handleDeleteHistory(item.id)}
-                              className="flex-1 h-7 text-[10px] bg-red-600 hover:bg-red-700 text-white"
-                            >
-                              Delete
-                            </Button>
-                          </div>
-                        )}
                       </div>
                     </div>
                   );
@@ -1272,6 +1342,60 @@ export default function VisualizerPage() {
           </div>
         </div>
       </div>
+      {/* --- HIDDEN PDF TEMPLATE --- */}
+      <div 
+        style={{ position: 'absolute', top: '-9999px', left: '-9999px', width: '800px', backgroundColor: 'white' }}
+      >
+        <div ref={pdfRef} className="bg-white text-black p-8 w-[800px] flex flex-col gap-6 font-sans">
+          {/* PDF Header */}
+          <div className="flex items-center justify-between border-b pb-4">
+            <h1 className="text-3xl font-bold text-brand-terracotta tracking-tight">FABRICVIZ</h1>
+            <p className="text-gray-500 text-sm">Design Without Compromise</p>
+          </div>
+          
+          {/* Main Rendered Image */}
+          <div className="w-full h-auto rounded-xl overflow-hidden border">
+            {renderedImage && (
+              <img 
+                src={renderedImage.startsWith('http') ? renderedImage : `${API_URL}${renderedImage}`} 
+                alt="Render" 
+                className="w-full h-full object-cover" 
+                crossOrigin="anonymous" 
+              />
+            )}
+          </div>
+
+          {/* Fabric Details */}
+          <div className="flex flex-col gap-4 mt-4">
+            <h2 className="text-xl font-semibold text-brand-text">Fabrics used ({assignedEntries.length})</h2>
+            <div className="flex flex-col gap-4">
+              {assignedEntries.map(([areaId, fabric]) => (
+                <div key={areaId} className="flex gap-4 items-start border-b pb-4">
+                  <div className="w-24 h-24 rounded-lg overflow-hidden border shrink-0">
+                    <img 
+                      src={fabric.image_url} 
+                      alt={fabric.fabricName} 
+                      className="w-full h-full object-cover" 
+                      crossOrigin="anonymous" 
+                    />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs uppercase text-brand-terracotta font-bold mb-1">
+                      {formatAreaLabel(areaId)}
+                    </span>
+                    <span className="text-lg font-semibold text-black">{fabric.fabricName}</span>
+                    <span className="text-sm text-gray-600 mt-1">
+                      {fabric.fabricCode && `Code: ${fabric.fabricCode} • `}
+                      {fabric.collectionName || fabric.category || 'Standard'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+      {/* --------------------------- */}
     </div>
   );
 }

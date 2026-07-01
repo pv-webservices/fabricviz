@@ -46,7 +46,7 @@ const multiAreaRenderSchema = z
       .array(areaAssignmentSchema)
       .min(1, 'At least one area assignment is required')
       .max(14, 'Maximum of 14 area assignments allowed'),
-    model: z.enum(['fast', 'pro']).default('fast'),
+    model: z.enum(['lite', 'fast', 'pro']).default('lite'),
     sourceType: z.enum(['predefined_room', 'uploaded_photo']),
     roomId: z.string().uuid('Invalid room ID').optional(),
     uploadedPhotoUrl: z.string().url('Invalid uploaded photo URL').optional(),
@@ -69,7 +69,7 @@ const legacyRenderSchema = z
     objectType: z.enum(['sofa', 'curtain', 'rug', 'wallpaper']),
     sourceType: z.enum(['template', 'predefined_room', 'upload', 'camera', 'uploaded_photo']),
     // New optional fields that can exist in legacy call
-    model: z.enum(['fast', 'pro']).default('fast'),
+    model: z.enum(['lite', 'fast', 'pro']).default('lite'),
     areaAssignments: z.undefined().optional(),
   })
   .refine((data) => data.roomId || data.uploadedPhotoUrl, {

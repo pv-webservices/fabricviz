@@ -165,17 +165,23 @@ export const AREA_PROMPT_FRAGMENTS: Record<string, AreaPromptFragment> = {
 
 // -- MODEL_CONFIG --------------------------------------------------------------
 
-export const MODEL_CONFIG: Record<'fast' | 'pro', ModelConfig> = {
+export const MODEL_CONFIG: Record<'lite' | 'fast' | 'pro', ModelConfig> = {
+  lite: {
+    modelId: process.env['NANO_BANANA_LITE_MODEL_ID'] ?? 'gemini-3.1-flash-lite-image',
+    displayName: 'Swift',
+    description: 'Nano Banana 2 Lite — fastest generation, ideal for quick previews',
+    apiEndpoint: process.env['NANO_BANANA_API_URL'] ?? 'https://api.nanobanana.ai/v1/render',
+  },
   fast: {
     modelId: process.env['NANO_BANANA_FAST_MODEL_ID'] ?? 'nano-banana-2.0',
-    displayName: 'Fast',
-    description: 'Nano Banana 2.0 � faster generation, great for previews',
+    displayName: 'Balanced',
+    description: 'Nano Banana 2.0 — balanced quality and speed',
     apiEndpoint: process.env['NANO_BANANA_API_URL'] ?? 'https://api.nanobanana.ai/v1/render',
   },
   pro: {
     modelId: process.env['NANO_BANANA_PRO_MODEL_ID'] ?? 'nano-banana-pro',
-    displayName: 'Pro',
-    description: 'Nano Banana Pro � highest quality, production renders',
+    displayName: 'Studio',
+    description: 'Nano Banana Pro — highest quality, production renders',
     apiEndpoint: process.env['NANO_BANANA_API_URL'] ?? 'https://api.nanobanana.ai/v1/render',
   },
 };
@@ -188,8 +194,8 @@ export function buildSceneLockDirective(
   fabricSwatchUrls: string[]
 ): string {
   const p1 =
-    'CRITICAL INSTRUCTION � IMAGE EDITING MODE ONLY: You are NOT generating a new image. ' +
-    'You are editing an existing photograph. The source room image is the base � every ' +
+    'CRITICAL INSTRUCTION – IMAGE EDITING MODE ONLY: You are NOT generating a new image. ' +
+    'You are editing an existing photograph. The source room image is the base – every ' +
     'pixel of the room, furniture geometry, walls, ceiling, floor, lighting, shadows, ' +
     'ambient occlusion, camera perspective, decorative objects, and all untargeted ' +
     'surfaces must remain completely unchanged. Your only task is to replace the ' +
@@ -203,21 +209,21 @@ export function buildSceneLockDirective(
         `photograph with only the target surfaces re-upholstered.`
       : `Source photograph to edit: ${roomImageUrl}. This is a user-provided interior ` +
         `photograph. The room may be casually lit or taken from a non-standard angle. ` +
-        `Regardless, treat ALL non-target surfaces as immutable � apply fabric replacements ` +
+        `Regardless, treat ALL non-target surfaces as immutable – apply fabric replacements ` +
         `faithfully to whatever perspective and lighting exist in this specific photograph.`;
 
   const p3Array = fabricSwatchUrls.map(
     (url, idx) =>
       `Fabric swatch reference image ${idx + 1}: ${url}. Use this exact swatch ` +
       `image to determine the fabric's color, texture, weave pattern, and sheen. Do not ` +
-      `approximate or guess the fabric appearance � replicate it precisely from this ` +
+      `approximate or guess the fabric appearance – replicate it precisely from this ` +
       `swatch image.`
   );
   const p3 = p3Array.join('\n');
 
   const p4 =
     'Output constraint: Generate the edited room image at maximum 1024x1024 pixels. ' +
-    'Photorealistic quality only � no illustration, painting, or artistic filter style. ' +
+    'Photorealistic quality only – no illustration, painting, or artistic filter style. ' +
     'The output must be indistinguishable from a real interior photograph with new ' +
     'fabric applied.';
 
@@ -230,7 +236,7 @@ export function buildSceneLockDirective(
  * Builds the final prompt string from an array of area assignments.
  *
  * @param assignments - Array of fabric-to-area assignments from the frontend payload.
- * @param model - 'fast' | 'pro' � model-specific quality note is prepended for 'pro'.
+ * @param model - 'lite' | 'fast' | 'pro' — model-specific quality note is prepended for 'pro' and 'lite'.
  * @param sourceType - 'predefined_room' | 'uploaded_photo'
  * @param roomImageUrl - The resolved public URL of the room/uploaded photo.
  * @param fabricSwatchUrls - Array of resolved public URLs of fabric swatch images.
@@ -238,7 +244,7 @@ export function buildSceneLockDirective(
  */
 export function buildRenderPrompt(
   assignments: AreaAssignment[],
-  model: 'fast' | 'pro',
+  model: 'lite' | 'fast' | 'pro',
   sourceType: 'predefined_room' | 'uploaded_photo',
   roomImageUrl: string,
   fabricSwatchUrls: string[]
@@ -267,7 +273,11 @@ export function buildRenderPrompt(
   });
 
   const allBlocks = areaBlocks.join('\n');
-  const modelNote = model === 'pro' ? 'Render quality: maximum fidelity, production grade.\n' : '';
+  const modelNote = model === 'pro'
+    ? 'Render quality: maximum fidelity, production grade.\n'
+    : model === 'lite'
+    ? 'Render quality: fast preview mode, optimise for speed over maximum detail.\n'
+    : '';
   const sceneLock = buildSceneLockDirective(sourceType, roomImageUrl, fabricSwatchUrls);
 
   return `${modelNote}${allBlocks}\n\n${sceneLock}`;

@@ -5,7 +5,7 @@ import { useCustomerAuth } from '../context/CustomerAuthContext';
 import {
   ArrowLeft, Upload, Wand2, Loader2, History, RotateCcw,
   Image as ImageIcon, Sofa, Blinds, Grid, Bed, Square, Plus, Check,
-  Zap, Star, Trash2, X, Eye, Download, Pencil, AlertTriangle,
+  Zap, Star, Trash2, X, Eye, Download, Pencil, AlertTriangle, Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
@@ -87,7 +87,7 @@ interface AreaAssignmentRecord {
   fabricTextureDescription: string;
 }
 
-type ModelChoice = 'fast' | 'pro';
+type ModelChoice = 'lite' | 'fast' | 'pro';
 type RoomType = { id: string; name: string; image_url: string } | null;
 type BeforeAfterTab = 'before' | 'after';
 
@@ -110,7 +110,7 @@ export default function VisualizerPage() {
   const [activeArea, setActiveArea] = useState<string | null>(null);
 
   // Model selection
-  const [selectedModel, setSelectedModel] = useState<ModelChoice>('fast');
+  const [selectedModel, setSelectedModel] = useState<ModelChoice>('lite');
 
   // Render state
   const [isRendering, setIsRendering] = useState(false);
@@ -1135,26 +1135,39 @@ export default function VisualizerPage() {
               <div className="bg-brand-bg rounded-xl border border-black/5 p-4 flex flex-col gap-4">
                 <div className="flex flex-col gap-2">
                   <span className="text-xs text-brand-muted font-semibold uppercase tracking-wider">Render Quality</span>
-                  <div className="flex w-full rounded-lg overflow-hidden border border-black/10 bg-brand-alt/30">
+                  <div className="flex w-full gap-2">
+                    <button
+                      onClick={() => setSelectedModel('lite')}
+                      className={`flex-1 flex flex-col items-center gap-0.5 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors min-h-[44px]
+                        ${selectedModel === 'lite'
+                          ? 'bg-brand-terracotta text-white'
+                          : 'bg-white/60 text-brand-muted border border-black/8 hover:text-brand-text hover:bg-brand-alt/50'}`}
+                    >
+                      <Sparkles size={16} />
+                      <span>Swift</span>
+                      <span className="text-[10px] font-normal opacity-70">Fastest</span>
+                    </button>
                     <button
                       onClick={() => setSelectedModel('fast')}
-                      className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold transition-colors min-h-[44px]
+                      className={`flex-1 flex flex-col items-center gap-0.5 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors min-h-[44px]
                         ${selectedModel === 'fast'
                           ? 'bg-brand-terracotta text-white'
-                          : 'text-brand-muted hover:text-brand-text hover:bg-brand-alt/50'}`}
+                          : 'bg-white/60 text-brand-muted border border-black/8 hover:text-brand-text hover:bg-brand-alt/50'}`}
                     >
-                      <Zap size={14} />
-                      <span>Fast</span>
+                      <Zap size={16} />
+                      <span>Balanced</span>
+                      <span className="text-[10px] font-normal opacity-70">Recommended</span>
                     </button>
                     <button
                       onClick={() => setSelectedModel('pro')}
-                      className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold transition-colors min-h-[44px]
+                      className={`flex-1 flex flex-col items-center gap-0.5 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors min-h-[44px]
                         ${selectedModel === 'pro'
                           ? 'bg-brand-terracotta text-white'
-                          : 'text-brand-muted hover:text-brand-text hover:bg-brand-alt/50'}`}
+                          : 'bg-white/60 text-brand-muted border border-black/8 hover:text-brand-text hover:bg-brand-alt/50'}`}
                     >
-                      <Star size={14} />
-                      <span>Pro</span>
+                      <Star size={16} />
+                      <span>Studio</span>
+                      <span className="text-[10px] font-normal opacity-70">Max quality</span>
                     </button>
                   </div>
                 </div>

@@ -6,8 +6,9 @@ import { buildPrompt } from '../recipes';
 import { NanoBananaService } from '../services/nano-banana';
 import { logIncident } from '../lib/telemetry';
 const MODEL_CONFIG: Record<string, { steps: number; size: '1024x1024'; displayName: string; modelId: string }> = {
-  fast: { steps: 10, size: '1024x1024', displayName: 'Fast', modelId: 'fast' },
-  pro: { steps: 20, size: '1024x1024', displayName: 'Pro', modelId: 'pro' },
+  lite: { steps: 8, size: '1024x1024', displayName: 'Swift', modelId: 'lite' },
+  fast: { steps: 10, size: '1024x1024', displayName: 'Balanced', modelId: 'fast' },
+  pro: { steps: 20, size: '1024x1024', displayName: 'Studio', modelId: 'pro' },
 };
 
 export interface AreaAssignment {
@@ -53,7 +54,7 @@ export function setupRenderWorker(connection: Redis, db: Pool) {
         renderJobId: string;
         visualizationId: string;
         composedPrompt?: string;
-        model?: 'fast' | 'pro';
+        model?: 'lite' | 'fast' | 'pro';
         areaAssignments?: AreaAssignment[];
         roomImageUrl?: string;
         fabricSwatchUrls?: string[];
@@ -104,7 +105,7 @@ export function setupRenderWorker(connection: Redis, db: Pool) {
           }
         }
 
-        const resolvedModel = (model === 'pro' ? 'pro' : 'fast') as 'fast' | 'pro';
+        const resolvedModel = (model === 'pro' ? 'pro' : model === 'fast' ? 'fast' : 'lite') as 'lite' | 'fast' | 'pro';
         const modelConfig = MODEL_CONFIG[resolvedModel];
         console.log(`[Job ${job.id}] Using model: ${modelConfig.displayName} (${modelConfig.modelId})`);
 
@@ -148,7 +149,7 @@ export function setupRenderWorker(connection: Redis, db: Pool) {
         });
 
         // 4. Call Nano Banana Service
-        const result = await nanoBanana.generateImage(prompt, finalSourceImage, model as 'fast' | 'pro', referenceImageUrls);
+        const result = await nanoBanana.generateImage(prompt, finalSourceImage, model as 'lite' | 'fast' | 'pro', referenceImageUrls);
 
         // LOG 2 - After the AI API call returns
         console.log('[RENDER_WORKER] AI API response received', {

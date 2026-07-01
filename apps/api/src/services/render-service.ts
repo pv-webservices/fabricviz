@@ -115,7 +115,7 @@ export async function createRenderJob(
       fabricTextureDescription: a.fabricTextureDescription,
       fabricImageUrl: a.fabricImageUrl,
     }));
-    const model = data.model ?? 'fast';
+    const model = data.model ?? 'lite';
     const composedPrompt = buildRenderPrompt(
       typedAssignments,
       model,

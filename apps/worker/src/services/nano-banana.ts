@@ -52,7 +52,7 @@ export class NanoBananaService {
   public async generateImage(
     prompt: string,
     sourceImageUrl?: string | null,
-    model: 'fast' | 'pro' = 'fast',
+    model: 'lite' | 'fast' | 'pro' = 'lite',
     referenceImageUrls: string[] = [],
   ): Promise<NanoBananaResponse> {
     if (this.useMock) {
@@ -65,7 +65,7 @@ export class NanoBananaService {
   private async generateImageReal(
     prompt: string,
     sourceImageUrl?: string | null,
-    model: 'fast' | 'pro' = 'fast',
+    model: 'lite' | 'fast' | 'pro' = 'lite',
     referenceImageUrls: string[] = [],
   ): Promise<NanoBananaResponse> {
 
@@ -90,7 +90,11 @@ export class NanoBananaService {
       let response: Response;
       if (isGeminiKey) {
         console.log(`[NanaBanana] Using Google AI Studio Gemini API (${model})`);
-        const modelEndpoint = model === 'fast' ? 'gemini-3.1-flash-image' : 'gemini-3-pro-image';
+        const modelEndpoint = model === 'pro'
+          ? 'gemini-3-pro-image'
+          : model === 'lite'
+          ? 'gemini-3.1-flash-lite-image'
+          : 'gemini-3.1-flash-image';
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelEndpoint}:generateContent?key=${this.apiKey}`;
 
         const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [

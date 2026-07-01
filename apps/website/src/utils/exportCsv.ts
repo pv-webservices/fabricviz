@@ -1,16 +1,24 @@
-export function exportCustomersToCSV(customers: any[]) {
-  // Columns: Name, Email, Mobile, Company, City, Status, Sessions, Last Active, Tags, Created
+import { Customer } from '@/types/customer';
+
+export function exportCustomersToCSV(customers: Customer[]): void {
+  // Columns: Access Code, Customer Name, Company, City, Email, Mobile, Country Code, Status, Notes, Tags, Total Credits, Used Credits, Remaining Credits, Session Count, Last Active, Created Date
   const headers = [
-    'Name', 
-    'Email', 
-    'Mobile', 
+    'Access Code',
+    'Customer Name', 
     'Company', 
     'City', 
+    'Email', 
+    'Mobile', 
+    'Country Code',
     'Status', 
-    'Sessions', 
-    'Last Active', 
+    'Notes',
     'Tags', 
-    'Created'
+    'Total Credits',
+    'Used Credits',
+    'Remaining Credits',
+    'Session Count', 
+    'Last Active', 
+    'Created Date'
   ];
 
   const escapeCSV = (str: string | number | null | undefined) => {
@@ -22,22 +30,40 @@ export function exportCustomersToCSV(customers: any[]) {
     return stringVal;
   };
 
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return '';
+    const d = new Date(dateString);
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    const hh = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+  };
+
   const rows = customers.map(c => {
     return [
+      c.access_code || '',
       c.full_name,
-      c.email,
-      `${c.country_code || ''} ${c.mobile || ''}`.trim(),
       c.company || '',
       c.city || '',
+      c.email,
+      c.mobile || '',
+      c.country_code || '',
       c.is_active ? 'Active' : 'Inactive',
+      c.notes || '',
+      (c.tags || []).join(';'),
+      c.credits?.total_credits || 0,
+      c.credits?.used_credits || 0,
+      c.credits?.remaining_credits || 0,
       c.session_count || 0,
-      c.last_active_at ? new Date(c.last_active_at).toLocaleString() : '',
-      (c.tags || []).join('; '),
-      c.created_at ? new Date(c.created_at).toLocaleDateString() : ''
+      formatDate(c.last_active_at),
+      formatDate(c.created_at)
     ].map(escapeCSV).join(',');
   });
 
-  const csvContent = [headers.join(','), ...rows].join('\n');
+  const BOM = '\uFEFF';
+  const csvContent = BOM + [headers.join(','), ...rows].join('\n');
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   
   const link = document.createElement('a');
